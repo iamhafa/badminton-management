@@ -56,7 +56,7 @@ export default function ParticipantSelector({
 	}
 
 	return (
-		<div className="rounded-2xl bg-white p-5 sm:p-6 shadow-sm border border-gray-100 flex flex-col gap-5">
+		<div className="rounded-2xl bg-white p-3.5 sm:p-6 shadow-sm border border-gray-100 flex flex-col gap-4 sm:gap-5">
 			{/* Section Header */}
 			<div className="flex flex-col gap-2">
 				<div className="flex items-center gap-2.5">
@@ -199,7 +199,7 @@ export default function ParticipantSelector({
 			</div>
 
 			{/* Tuyển người chơi vãng lai hôm nay */}
-			<div className="rounded-xl border border-[#fed7aa] bg-[#fffaf0] p-4 flex flex-col gap-3">
+			<div className="rounded-xl border border-[#fed7aa] bg-[#fffaf0] p-3.5 sm:p-4 flex flex-col gap-3">
 				<div className="flex items-center justify-between">
 					<div className="flex items-center gap-2">
 						<span className="text-base">👥</span>

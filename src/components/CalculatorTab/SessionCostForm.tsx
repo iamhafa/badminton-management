@@ -47,22 +47,23 @@ export default function SessionCostForm({ input, onChange, participants }: Sessi
 	}
 
 	return (
-		<div className="rounded-2xl bg-white p-5 sm:p-6 shadow-sm border border-gray-100 flex flex-col gap-5">
+		<div className="rounded-2xl bg-white p-3.5 sm:p-6 shadow-sm border border-gray-100 flex flex-col gap-4 sm:gap-5">
 			{/* Header */}
-			<div className="flex items-center justify-between pb-1">
-				<div className="flex items-center gap-2.5">
+			<div className="flex flex-wrap items-center justify-between gap-2 pb-1">
+				<div className="flex items-center gap-2">
 					<span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-[#d1fae5] text-xs font-bold text-[#047857]">
 						1
 					</span>
-					<h2 className="text-base font-bold text-gray-900 tracking-tight">Thông số chi phí buổi chơi</h2>
+					<h2 className="text-sm sm:text-base font-bold text-gray-900 tracking-tight">Thông số chi phí buổi chơi</h2>
 				</div>
 				<button
 					type="button"
 					onClick={handleReset}
-					className="flex items-center gap-1.5 text-xs font-semibold text-[#059669] hover:text-[#047857] transition-colors"
+					className="flex items-center gap-1 text-xs font-semibold text-[#059669] hover:text-[#047857] transition-colors shrink-0"
 				>
 					<RotateCcw className="size-3.5" />
-					Khôi phục mẫu ví dụ
+					<span className="hidden sm:inline">Khôi phục mẫu ví dụ</span>
+					<span className="sm:hidden">Mẫu ví dụ</span>
 				</button>
 			</div>
 
@@ -202,16 +203,16 @@ export default function SessionCostForm({ input, onChange, participants }: Sessi
 								</button>
 							))}
 						</div>
-						<span className="text-[11px] text-gray-400 italic">Áp dụng cả Nữ cố định &amp; vãng lai</span>
+						<span className="text-[10px] sm:text-[11px] text-gray-400 italic">Áp dụng cả Nữ cố định &amp; vãng lai</span>
 					</div>
 				</div>
 			</div>
 
 			{/* Chi phí cầu lông (Card vàng cam) */}
-			<div className="rounded-xl border border-[#fde68a] bg-[#fffdf0] p-4 flex flex-col gap-3">
-				<div className="flex flex-wrap items-center justify-between gap-2">
+			<div className="rounded-xl border border-[#fde68a] bg-[#fffdf0] p-3.5 sm:p-4 flex flex-col gap-3">
+				<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
 					<div className="flex items-center gap-1.5 text-xs font-bold text-[#b45309] uppercase tracking-wide">
-						<Feather className="size-4 text-[#d97706]" />
+						<Feather className="size-4 text-[#d97706] shrink-0" />
 						<span>2 &amp; 3. CHI PHÍ CẦU LÔNG ({SHUTTLES_PER_TUBE} QUẢ / ỐNG)</span>
 					</div>
 					<div className="flex flex-wrap items-center gap-1.5">
@@ -302,7 +303,7 @@ export default function SessionCostForm({ input, onChange, participants }: Sessi
 			</div>
 
 			{/* Tiền nước lọc (Card xanh dương) */}
-			<div className="rounded-xl border border-[#bfdbfe] bg-[#f0f7ff] p-4 flex flex-col gap-3">
+			<div className="rounded-xl border border-[#bfdbfe] bg-[#f0f7ff] p-3.5 sm:p-4 flex flex-col gap-3">
 				<div className="flex items-center gap-1.5 text-xs font-bold text-[#1d4ed8] uppercase tracking-wide">
 					<span className="text-sm">🚰</span>
 					<span>4. TIỀN NƯỚC LỌC</span>

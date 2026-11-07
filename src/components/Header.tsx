@@ -7,10 +7,10 @@ import { Calculator, Cloud, CloudOff, History, LoaderCircle, Users } from 'lucid
 export type TabKey = 'calculator' | 'roster' | 'history';
 export type CloudStatus = 'connecting' | 'online' | 'offline';
 
-const TABS: { key: TabKey; label: string; icon: typeof Calculator }[] = [
-	{ key: 'calculator', label: 'Tính tiền buổi chơi', icon: Calculator },
-	{ key: 'roster', label: 'Thành viên CLB', icon: Users },
-	{ key: 'history', label: 'Lịch sử các tuần', icon: History },
+const TABS: { key: TabKey; label: string; shortLabel: string; icon: typeof Calculator }[] = [
+	{ key: 'calculator', label: 'Tính tiền buổi chơi', shortLabel: 'Tính tiền', icon: Calculator },
+	{ key: 'roster', label: 'Thành viên CLB', shortLabel: 'Thành viên', icon: Users },
+	{ key: 'history', label: 'Lịch sử các tuần', shortLabel: 'Lịch sử', icon: History },
 ];
 
 interface HeaderProps {
@@ -37,37 +37,38 @@ export default function Header({ cloudStatus, onRetryConnection, rosterCount = 0
 				}}
 			/>
 
-			<div className="relative mx-auto flex max-w-6xl flex-col gap-3 px-4 py-2.5 sm:flex-row sm:items-center sm:justify-between">
+			<div className="relative mx-auto flex max-w-6xl flex-col gap-2.5 px-3 py-2 sm:px-4 sm:py-2.5 sm:flex-row sm:items-center sm:justify-between">
 				{/* Left: Brand + Cloud status */}
-				<div className="flex items-center gap-3">
-					<div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[#f6c343] text-lg shadow-sm font-bold text-emerald-950">
+				<div className="flex items-center gap-2.5 sm:gap-3">
+					<div className="flex size-9 sm:size-10 shrink-0 items-center justify-center rounded-full bg-[#f6c343] text-base sm:text-lg shadow-sm font-bold text-emerald-950">
 						🏸
 					</div>
-					<div className="flex flex-col">
-						<div className="flex flex-wrap items-center gap-2">
-							<span className="text-base font-bold text-white tracking-tight">Vụt Cầu Lông</span>
+					<div className="flex flex-col min-w-0">
+						<div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+							<span className="text-sm sm:text-base font-bold text-white tracking-tight truncate">CLB Cầu Lông</span>
 							<CloudIndicator status={cloudStatus} onRetry={onRetryConnection} />
 						</div>
-						<p className="text-[11px] text-emerald-100/90 font-normal">
+						<p className="text-[10px] sm:text-[11px] text-emerald-100/90 font-normal truncate">
 							Công cụ chia tiền sân, cầu &amp; theo dõi lịch sử CLB
 						</p>
 					</div>
 				</div>
 
 				{/* Right: Tabs segmented control */}
-				<TabsList className="flex h-auto w-full sm:w-auto items-center justify-start rounded-lg bg-[#075334] p-1 border border-emerald-600/40 gap-1">
-					{TABS.map(({ key, label, icon: Icon }) => (
+				<TabsList className="flex h-auto w-full sm:w-auto items-center justify-between sm:justify-start rounded-lg bg-[#075334] p-1 border border-emerald-600/40 gap-1 overflow-x-auto no-scrollbar">
+					{TABS.map(({ key, label, shortLabel, icon: Icon }) => (
 						<TabsTrigger
 							key={key}
 							value={key}
 							className={cn(
-								'flex flex-1 sm:flex-none items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium text-emerald-100 transition-all',
+								'flex flex-1 sm:flex-none shrink-0 items-center justify-center gap-1 sm:gap-1.5 rounded-md px-2 sm:px-3 py-1.5 text-xs font-medium text-emerald-100 transition-all',
 								'hover:text-white',
 								'data-active:bg-white data-active:text-gray-900 data-active:font-semibold data-active:shadow-sm',
 							)}
 						>
 							<Icon className="size-3.5 shrink-0" />
-							<span>{label}</span>
+							<span className="hidden sm:inline">{label}</span>
+							<span className="sm:hidden">{shortLabel}</span>
 							{tabCounts[key] !== undefined && (
 								<span className="inline-flex items-center justify-center rounded-full bg-[#0a6c44] data-active:bg-emerald-100 data-active:text-emerald-800 text-white px-1.5 py-0.2 text-[10px] font-bold">
 									{tabCounts[key]}

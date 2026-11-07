@@ -86,22 +86,22 @@ export default function BillSummaryCard({ bill, onSave, cloudOnline }: BillSumma
 				</div>
 
 				{/* 3 Cost boxes */}
-				<div className="grid grid-cols-3 gap-2 pt-1">
-					<div className="flex flex-col items-center justify-center rounded-lg bg-[#16382c] px-2 py-2 text-center border border-[#204a3c]">
-						<span className="text-[10px] text-gray-400 leading-tight">Tiền sân ({bill.hoursPlayed}h)</span>
-						<span className="text-xs font-bold text-white mt-0.5">{formatVND(bill.courtFee)}</span>
+				<div className="grid grid-cols-3 gap-1.5 sm:gap-2 pt-1">
+					<div className="flex flex-col items-center justify-center rounded-lg bg-[#16382c] px-1 sm:px-2 py-2 text-center border border-[#204a3c]">
+						<span className="text-[9px] sm:text-[10px] text-gray-400 leading-tight">Tiền sân ({bill.hoursPlayed}h)</span>
+						<span className="text-[11px] sm:text-xs font-bold text-white mt-0.5">{formatVND(bill.courtFee)}</span>
 					</div>
-					<div className="flex flex-col items-center justify-center rounded-lg bg-[#16382c] px-2 py-2 text-center border border-[#204a3c]">
-						<span className="text-[10px] text-gray-400 leading-tight truncate w-full">
-							{bill.shuttleBrand || 'Cầu'} ({bill.shuttlesUsed} quả)
+					<div className="flex flex-col items-center justify-center rounded-lg bg-[#16382c] px-1 sm:px-2 py-2 text-center border border-[#204a3c]">
+						<span className="text-[9px] sm:text-[10px] text-gray-400 leading-tight truncate w-full">
+							{bill.shuttleBrand || 'Cầu'} ({bill.shuttlesUsed}q)
 						</span>
-						<span className="text-xs font-bold text-[#facc15] mt-0.5">
+						<span className="text-[11px] sm:text-xs font-bold text-[#facc15] mt-0.5">
 							{formatVND(bill.shuttleTotalCost)}
 						</span>
 					</div>
-					<div className="flex flex-col items-center justify-center rounded-lg bg-[#16382c] px-2 py-2 text-center border border-[#204a3c]">
-						<span className="text-[10px] text-gray-400 leading-tight">Tiền nước lọc</span>
-						<span className="text-xs font-bold text-[#38bdf8] mt-0.5">{formatVND(bill.waterFee)}</span>
+					<div className="flex flex-col items-center justify-center rounded-lg bg-[#16382c] px-1 sm:px-2 py-2 text-center border border-[#204a3c]">
+						<span className="text-[9px] sm:text-[10px] text-gray-400 leading-tight">Nước lọc</span>
+						<span className="text-[11px] sm:text-xs font-bold text-[#38bdf8] mt-0.5">{formatVND(bill.waterFee)}</span>
 					</div>
 				</div>
 			</div>

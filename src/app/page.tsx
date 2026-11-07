@@ -195,7 +195,7 @@ export default function Home() {
 		>
 			<Header cloudStatus={cloudStatus} onRetryConnection={retryConnection} rosterCount={roster.length} historyCount={sessions.length} />
 
-			<main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6">
+			<main className="mx-auto w-full max-w-6xl flex-1 px-3 py-3.5 sm:px-4 sm:py-6">
 				{!hydrated ? (
 					<p className="text-sm text-muted-foreground">Đang tải...</p>
 				) : (
