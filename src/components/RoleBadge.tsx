@@ -10,8 +10,9 @@ export const ROLE_LABELS: Record<MemberRole, string> = {
 
 export default function RoleBadge({ role, className }: { role?: MemberRole; className?: string }) {
   if (!role) return null;
-  const isLeader = role === 'LEADER';
+  const isLeader: boolean = role === 'LEADER';
   const Icon = isLeader ? Crown : Shield;
+
   return (
     <Badge
       title={ROLE_LABELS[role]}

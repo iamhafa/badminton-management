@@ -13,6 +13,10 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: 'CLB Cầu Lông - Quản lý chi phí',
   description: 'Tính tiền sân, cầu, nước và quản lý thành viên CLB cầu lông',
+  icons: {
+    icon: '/badminton-icon.png',
+    apple: '/badminton-icon.png',
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<'/'>) {

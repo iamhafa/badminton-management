@@ -72,18 +72,18 @@ export default function SessionCostForm({ input, onChange, participants }: Sessi
         {/* Ngày chơi */}
         <div className="flex flex-col gap-1.5">
           <Label className="text-[11px] font-bold uppercase tracking-wider text-gray-500">NGÀY CHƠI (DD/MM/YYYY)</Label>
-          <div className="flex items-center gap-2">
+          <div className="flex items-stretch gap-2">
             <div className="relative flex-1">
               <CalendarDays className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-gray-400" />
               <Input
                 type="date"
                 value={input.isoDate}
                 onChange={(e) => e.target.value && onChange({ isoDate: e.target.value })}
-                className="pl-9 h-10 font-semibold text-gray-800 rounded-lg border-gray-200"
+                className="pl-9 h-10 min-h-10 w-full appearance-none [-webkit-appearance:none] [color-scheme:light] font-semibold text-gray-800 rounded-lg border-gray-200"
               />
             </div>
             {weekday && (
-              <span className="shrink-0 rounded-md bg-[#dcfce7] px-3 py-2 text-xs font-bold text-[#15803d] border border-[#86efac]">
+              <span className="flex h-10 shrink-0 items-center justify-center rounded-lg bg-[#dcfce7] px-3.5 text-xs font-bold text-[#15803d] border border-[#86efac]">
                 {weekday}
               </span>
             )}

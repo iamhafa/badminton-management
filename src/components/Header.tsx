@@ -3,6 +3,7 @@
 import { TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/libs/utils';
 import { Calculator, Cloud, CloudOff, History, LoaderCircle, Users } from 'lucide-react';
+import Image from 'next/image';
 
 export type TabKey = 'calculator' | 'roster' | 'history';
 export type CloudStatus = 'connecting' | 'online' | 'offline';
@@ -40,8 +41,15 @@ export default function Header({ cloudStatus, onRetryConnection, rosterCount = 0
       <div className="relative mx-auto flex max-w-6xl flex-col gap-2.5 px-3 py-2 sm:px-4 sm:py-2.5 sm:flex-row sm:items-center sm:justify-between">
         {/* Left: Brand + Cloud status */}
         <div className="flex items-center gap-2.5 sm:gap-3">
-          <div className="flex size-9 sm:size-10 shrink-0 items-center justify-center rounded-full bg-[#f6c343] text-base sm:text-lg shadow-sm font-bold text-emerald-950">
-            🏸
+          <div className="flex size-9 sm:size-10 shrink-0 items-center justify-center rounded-full bg-[#f6c343] p-1.5 shadow-sm">
+            <Image
+              src="/badminton-icon.png"
+              alt="CLB Cầu Lông"
+              width={40}
+              height={40}
+              className="size-full object-contain"
+              priority
+            />
           </div>
           <div className="flex flex-col min-w-0">
             <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
