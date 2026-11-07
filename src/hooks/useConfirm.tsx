@@ -60,10 +60,7 @@ export function useConfirm() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>{options.cancelLabel ?? 'Hủy'}</AlertDialogCancel>
-            <AlertDialogAction
-              variant={options.destructive ? 'destructive' : 'default'}
-              onClick={() => settle(true)}
-            >
+            <AlertDialogAction variant={options.destructive ? 'destructive' : 'default'} onClick={() => settle(true)}>
               {options.confirmLabel ?? 'Đồng ý'}
             </AlertDialogAction>
           </AlertDialogFooter>

@@ -55,8 +55,7 @@ export function calculateBill(input: SessionInput, players: Player[], createdAt 
 
   const playerBreakdowns: PlayerBreakdown[] = players.map((player) => {
     const baseShare = player.gender === 'FEMALE' ? femaleShare : maleShare;
-    const waterCredit =
-      input.waterPayerId !== ORGANIZER_ID && input.waterPayerId === player.id ? input.waterFee : 0;
+    const waterCredit = input.waterPayerId !== ORGANIZER_ID && input.waterPayerId === player.id ? input.waterFee : 0;
     const rawNetPayable = baseShare - waterCredit;
     return {
       ...player,

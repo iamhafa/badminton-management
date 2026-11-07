@@ -77,8 +77,7 @@ export async function fetchSessions(): Promise<SessionBill[]> {
 }
 
 export async function saveSession(bill: SessionBill): Promise<string> {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { id, ...data } = bill;
+  const { id: _id, ...data } = bill;
   const ref = await addDoc(collection(getDb(), SESSIONS_COLLECTION), data);
   return ref.id;
 }

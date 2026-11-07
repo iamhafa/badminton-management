@@ -6,23 +6,23 @@ import './globals.css';
 
 // Inter có bộ ký tự tiếng Việt; gán vào --font-sans để shadcn dùng làm font mặc định.
 const inter = Inter({
-	variable: '--font-sans',
-	subsets: ['latin', 'vietnamese'],
+  variable: '--font-sans',
+  subsets: ['latin', 'vietnamese'],
 });
 
 export const metadata: Metadata = {
-	title: 'CLB Cầu Lông - Quản lý chi phí',
-	description: 'Tính tiền sân, cầu, nước và quản lý thành viên CLB cầu lông',
+  title: 'CLB Cầu Lông - Quản lý chi phí',
+  description: 'Tính tiền sân, cầu, nước và quản lý thành viên CLB cầu lông',
 };
 
 export default function RootLayout({ children }: LayoutProps<'/'>) {
-	return (
-		<html lang="vi" className={cn('h-full antialiased font-sans', inter.variable)}>
-			<body className="min-h-full flex flex-col">
-				{children}
-				{/* App đang dùng giao diện sáng nên cố định theme="light" cho thông báo. */}
-				<Toaster theme="dark" position="bottom-center" richColors closeButton />
-			</body>
-		</html>
-	);
+  return (
+    <html lang="vi" className={cn('h-full antialiased font-sans', inter.variable)}>
+      <body className="min-h-full flex flex-col">
+        {children}
+        {/* App đang dùng giao diện sáng nên cố định theme="light" cho thông báo. */}
+        <Toaster theme="dark" position="bottom-center" richColors closeButton />
+      </body>
+    </html>
+  );
 }
