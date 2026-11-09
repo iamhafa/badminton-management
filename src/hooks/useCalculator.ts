@@ -3,7 +3,7 @@
 import { calculateBill } from '@/libs/calculator';
 import { todayIso } from '@/libs/date-utils';
 import type { Gender, Player, SessionBill, SessionInput } from '@/types/badminton';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 const DEFAULT_INPUT: Omit<SessionInput, 'isoDate'> = {
   hoursPlayed: 2,
@@ -27,23 +27,23 @@ export function useCalculator(roster: Player[]) {
     setInput((prev) => (prev.isoDate ? prev : { ...prev, isoDate: todayIso() }));
   }, []);
 
-  function toggleMember(id: string) {
+  const toggleMember = useCallback((id: string) => {
     setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
-  }
+  }, []);
 
-  function toggleWater(id: string) {
+  const toggleWater = useCallback((id: string) => {
     setNoWaterIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
-  }
+  }, []);
 
-  function selectAllMembers() {
+  const selectAllMembers = useCallback(() => {
     setSelectedIds(roster.map((m) => m.id));
-  }
+  }, [roster]);
 
-  function clearAllMembers() {
+  const clearAllMembers = useCallback(() => {
     setSelectedIds([]);
-  }
+  }, []);
 
-  function addGuest(name: string, gender: Gender) {
+  const addGuest = useCallback((name: string, gender: Gender) => {
     const newGuest: Player = {
       id: `guest_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
       name,
@@ -53,21 +53,21 @@ export function useCalculator(roster: Player[]) {
       active: true,
     };
     setGuests((prev) => [...prev, newGuest]);
-  }
+  }, []);
 
-  function toggleGuestSource(id: string) {
+  const toggleGuestSource = useCallback((id: string) => {
     setGuests((prev) =>
       prev.map((g) => (g.id === id ? { ...g, guestSource: g.guestSource === 'FACEBOOK' ? 'FRIEND' : 'FACEBOOK' } : g)),
     );
-  }
+  }, []);
 
-  function updateGuest(id: string, patch: Partial<Pick<Player, 'name' | 'gender' | 'guestSource'>>) {
+  const updateGuest = useCallback((id: string, patch: Partial<Pick<Player, 'name' | 'gender' | 'guestSource'>>) => {
     setGuests((prev) => prev.map((g) => (g.id === id ? { ...g, ...patch } : g)));
-  }
+  }, []);
 
-  function removeGuest(id: string) {
+  const removeGuest = useCallback((id: string) => {
     setGuests((prev) => prev.filter((g) => g.id !== id));
-  }
+  }, []);
 
   const effectiveInput = useMemo(
     () => ({
@@ -78,16 +78,25 @@ export function useCalculator(roster: Player[]) {
   );
 
   const participants = useMemo<Player[]>(() => {
-    const fromRoster = roster
-      .filter((m) => selectedIds.includes(m.id))
-      .map((m) => ({
-        ...m,
-        drinksWater: !noWaterIds.includes(m.id),
-      }));
+    const selectedSet = new Set(selectedIds);
+    const noWaterSet = new Set(noWaterIds);
+
+    const fromRoster: Player[] = [];
+    for (let i = 0; i < roster.length; i++) {
+      const m = roster[i];
+      if (selectedSet.has(m.id)) {
+        fromRoster.push({
+          ...m,
+          drinksWater: !noWaterSet.has(m.id),
+        });
+      }
+    }
+
     const guestList = guests.map((g) => ({
       ...g,
-      drinksWater: !noWaterIds.includes(g.id),
+      drinksWater: !noWaterSet.has(g.id),
     }));
+
     return [...fromRoster, ...guestList];
   }, [roster, selectedIds, guests, noWaterIds]);
 

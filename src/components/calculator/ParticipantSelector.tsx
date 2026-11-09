@@ -48,10 +48,19 @@ export default function ParticipantSelector({
   const [pendingName, setPendingName] = useState('');
   const [pendingGender, setPendingGender] = useState<Gender>('MALE');
 
-  const maleCount =
-    roster.filter((m) => selected.has(m.id) && m.gender === 'MALE').length + guests.filter((g) => g.gender === 'MALE').length;
-  const femaleCount =
-    roster.filter((m) => selected.has(m.id) && m.gender === 'FEMALE').length + guests.filter((g) => g.gender === 'FEMALE').length;
+  let maleCount = 0;
+  let femaleCount = 0;
+  for (let i = 0; i < roster.length; i++) {
+    const m = roster[i];
+    if (selected.has(m.id)) {
+      if (m.gender === 'MALE') maleCount++;
+      else femaleCount++;
+    }
+  }
+  for (let i = 0; i < guests.length; i++) {
+    if (guests[i].gender === 'MALE') maleCount++;
+    else femaleCount++;
+  }
   const totalCount = maleCount + femaleCount;
 
   function handleAdd() {
@@ -98,7 +107,7 @@ export default function ParticipantSelector({
               </button>
             )}
           </div>
-          {roster.length > 0 && (
+          {roster.length > 0 ? (
             <div className="flex items-center gap-2 text-xs text-gray-600 font-medium">
               <button type="button" onClick={onSelectAll} className="hover:text-emerald-700 transition-colors">
                 Chọn tất cả
@@ -108,7 +117,7 @@ export default function ParticipantSelector({
                 Bỏ chọn hết
               </button>
             </div>
-          )}
+          ) : null}
         </div>
 
         {rosterLoading ? (
@@ -209,11 +218,11 @@ export default function ParticipantSelector({
               6. TUYỂN NGƯỜI CHƠI VÃNG LAI HÔM NAY
             </span>
           </div>
-          {guests.length > 0 && (
+          {guests.length > 0 ? (
             <span className="rounded-md border border-[#fed7aa] bg-[#ffedd5] px-2 py-0.5 text-[11px] font-bold text-[#c2410c]">
               {guests.length} vãng lai
             </span>
-          )}
+          ) : null}
         </div>
         <p className="text-[11px] text-gray-500 -mt-1">
           Vãng lai được tính phí theo giới tính (Nam hoặc Nữ) giống hệt thành viên cố định
@@ -249,7 +258,7 @@ export default function ParticipantSelector({
         </div>
 
         {/* Guest List Chips */}
-        {guests.length > 0 && (
+        {guests.length > 0 ? (
           <div className="flex flex-wrap gap-2 pt-1">
             {guests.map((guest) => {
               const isMale = guest.gender === 'MALE';
@@ -321,7 +330,7 @@ export default function ParticipantSelector({
               );
             })}
           </div>
-        )}
+        ) : null}
       </div>
     </div>
   );

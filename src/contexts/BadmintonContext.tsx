@@ -42,22 +42,39 @@ export function BadmintonProvider({ children }: { children: ReactNode }) {
   const [sessionsLoading, setSessionsLoading] = useState(true);
   const [sessionsError, setSessionsError] = useState<string | null>(null);
 
-  // ---------- Firestore Sync ----------
+  // ---------- Firestore Sync (Parallel via Promise.allSettled) ----------
 
-  const loadRoster = useCallback(() => {
-    fetchRoster()
-      .then((members) => {
-        setRoster(members);
-        setCloudStatus('online');
-      })
-      .catch((err) => {
-        console.error('Không tải được danh sách thành viên:', err);
-        setCloudStatus('offline');
-      })
-      .finally(() => setRosterLoading(false));
+  const syncAll = useCallback(async () => {
+    setRosterLoading(true);
+    setSessionsLoading(true);
+    setCloudStatus('connecting');
+
+    const [rosterRes, sessionsRes] = await Promise.allSettled([fetchRoster(), fetchSessions()]);
+
+    if (rosterRes.status === 'fulfilled') {
+      setRoster(rosterRes.value);
+      setCloudStatus('online');
+    } else {
+      console.error('Không tải được danh sách thành viên:', rosterRes.reason);
+      setCloudStatus('offline');
+    }
+    setRosterLoading(false);
+
+    if (sessionsRes.status === 'fulfilled') {
+      setSessions(sessionsRes.value);
+      setSessionsError(null);
+    } else {
+      setSessionsError(`Không tải được lịch sử: ${errorMessage(sessionsRes.reason)}`);
+    }
+    setSessionsLoading(false);
   }, []);
 
-  const loadSessions = useCallback(() => {
+  useEffect(() => {
+    syncAll();
+  }, [syncAll]);
+
+  const refreshSessions = useCallback(() => {
+    setSessionsLoading(true);
     fetchSessions()
       .then((list) => {
         setSessions(list);
@@ -67,74 +84,65 @@ export function BadmintonProvider({ children }: { children: ReactNode }) {
       .finally(() => setSessionsLoading(false));
   }, []);
 
-  useEffect(() => {
-    loadRoster();
-    loadSessions();
-  }, [loadRoster, loadSessions]);
-
-  function retryConnection() {
-    setCloudStatus('connecting');
-    setRosterLoading(true);
-    setSessionsLoading(true);
-    loadRoster();
-    loadSessions();
-  }
-
-  function refreshSessions() {
-    setSessionsLoading(true);
-    loadSessions();
-  }
-
   const cloudOnline = cloudStatus === 'online';
 
-  async function handleSaveRoster(next: Player[]) {
-    setRoster(next);
-    if (!cloudOnline) {
-      toast.info('Đã lưu trên máy. Chưa kết nối cloud nên chưa sync lên Firebase.');
-      return;
-    }
-    try {
-      await saveRoster(next);
-      toast.success('Đã lưu danh sách thành viên lên Firebase');
-    } catch (err) {
-      toast.error(`Lưu thất bại: ${errorMessage(err)}`);
-    }
-  }
+  const handleSaveRoster = useCallback(
+    async (next: Player[]) => {
+      setRoster(next);
+      if (!cloudOnline) {
+        toast.info('Đã lưu trên máy. Chưa kết nối cloud nên chưa sync lên Firebase.');
+        return;
+      }
+      try {
+        await saveRoster(next);
+        toast.success('Đã lưu danh sách thành viên lên Firebase');
+      } catch (err) {
+        toast.error(`Lưu thất bại: ${errorMessage(err)}`);
+      }
+    },
+    [cloudOnline],
+  );
 
-  async function handleSaveSession(newBill: SessionBill) {
-    setSessions((prev) => [newBill, ...prev.filter((s) => s.id !== newBill.id)]);
-    if (!cloudOnline) {
-      toast.info('Đã lưu vào danh sách trên máy. Chưa sync Firebase.');
-      return;
-    }
-    try {
-      await saveSession(newBill);
-      toast.success('Đã lưu buổi chơi vào Lịch sử (Firebase)');
-    } catch (err) {
-      toast.error(`Không thể lưu lên Cloud: ${errorMessage(err)}`);
-    }
-  }
+  const handleSaveSession = useCallback(
+    async (newBill: SessionBill) => {
+      setSessions((prev) => [newBill, ...prev.filter((s) => s.id !== newBill.id)]);
+      if (!cloudOnline) {
+        toast.info('Đã lưu vào danh sách trên máy. Chưa sync Firebase.');
+        return;
+      }
+      try {
+        await saveSession(newBill);
+        toast.success('Đã lưu buổi chơi vào Lịch sử (Firebase)');
+      } catch (err) {
+        toast.error(`Không thể lưu lên Cloud: ${errorMessage(err)}`);
+      }
+    },
+    [cloudOnline],
+  );
 
-  async function handleDeleteSession(id: string) {
-    setSessions((prev) => prev.filter((s) => s.id !== id));
-    if (!cloudOnline) {
-      toast.info('Đã xóa khỏi danh sách trên máy.');
-      return;
-    }
-    try {
-      await deleteSession(id);
-      toast.success('Đã xóa buổi chơi khỏi Firebase');
-    } catch (err) {
-      toast.error(`Xóa thất bại: ${errorMessage(err)}`);
-      refreshSessions();
-    }
-  }
+  const handleDeleteSession = useCallback(
+    async (id: string) => {
+      setSessions((prev) => prev.filter((s) => s.id !== id));
+      if (!cloudOnline) {
+        toast.info('Đã xóa khỏi danh sách trên máy.');
+        return;
+      }
+      try {
+        await deleteSession(id);
+        toast.success('Đã xóa buổi chơi khỏi Firebase');
+      } catch (err) {
+        toast.error(`Xóa thất bại: ${errorMessage(err)}`);
+        refreshSessions();
+      }
+    },
+    [cloudOnline, refreshSessions],
+  );
 
   const value = useMemo(
     () => ({
       cloudStatus,
       cloudOnline,
-      retryConnection,
+      retryConnection: syncAll,
       roster,
       rosterLoading,
       handleSaveRoster,
@@ -145,7 +153,20 @@ export function BadmintonProvider({ children }: { children: ReactNode }) {
       handleSaveSession,
       handleDeleteSession,
     }),
-    [cloudStatus, cloudOnline, roster, rosterLoading, sessions, sessionsLoading, sessionsError],
+    [
+      cloudStatus,
+      cloudOnline,
+      syncAll,
+      roster,
+      rosterLoading,
+      handleSaveRoster,
+      sessions,
+      sessionsLoading,
+      sessionsError,
+      refreshSessions,
+      handleSaveSession,
+      handleDeleteSession,
+    ],
   );
 
   return <BadmintonContext.Provider value={value}>{children}</BadmintonContext.Provider>;

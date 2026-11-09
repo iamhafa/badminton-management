@@ -44,8 +44,16 @@ export function calcGenderShares(
 
 /** Tính toàn bộ bill cho 1 buổi chơi. `players` là danh sách người đã tham gia (cố định + vãng lai). */
 export function calculateBill(input: SessionInput, players: Player[], createdAt = ''): SessionBill {
-  const maleCount = players.filter((p) => p.gender === 'MALE').length;
-  const femaleCount = players.filter((p) => p.gender === 'FEMALE').length;
+  let maleCount = 0;
+  let femaleCount = 0;
+  let waterDrinkersCount = 0;
+
+  for (let i = 0; i < players.length; i++) {
+    const p = players[i];
+    if (p.gender === 'MALE') maleCount++;
+    else femaleCount++;
+    if (p.drinksWater !== false) waterDrinkersCount++;
+  }
   const totalCount = maleCount + femaleCount;
 
   const shuttleTotalCost = calcShuttleCost(input.tubePrice, input.shuttlesUsed);
@@ -56,8 +64,6 @@ export function calculateBill(input: SessionInput, players: Player[], createdAt 
   const { maleShare, femaleShare } = calcGenderShares(courtAndShuttleCost, maleCount, femaleCount, input.femaleCap);
 
   // Phân bổ tiền nước lọc: chỉ chia cho những người có uống nước
-  const waterDrinkers = players.filter((p) => p.drinksWater !== false);
-  const waterDrinkersCount = waterDrinkers.length;
   const waterPerPerson = waterDrinkersCount > 0 && input.waterFee > 0 ? input.waterFee / waterDrinkersCount : 0;
 
   const playerBreakdowns: PlayerBreakdown[] = players.map((player) => {
