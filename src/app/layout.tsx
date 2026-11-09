@@ -1,7 +1,10 @@
+import Header from '@/components/Header';
 import { Toaster } from '@/components/ui/sonner';
+import { BadmintonProvider } from '@/contexts/BadmintonContext';
 import { cn } from '@/libs/utils';
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
+import type { ReactNode } from 'react';
 import './globals.css';
 
 // Inter có bộ ký tự tiếng Việt; gán vào --font-sans để shadcn dùng làm font mặc định.
@@ -19,11 +22,16 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({ children }: LayoutProps<'/'>) {
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="vi" className={cn('h-full antialiased font-sans', inter.variable)}>
       <body className="min-h-full flex flex-col">
-        {children}
+        <BadmintonProvider>
+          <div className="flex min-h-full flex-1 flex-col gap-0 bg-[#f0f4f8]">
+            <Header />
+            <main className="mx-auto w-full max-w-6xl flex-1 px-3 py-3.5 sm:px-4 sm:py-6">{children}</main>
+          </div>
+        </BadmintonProvider>
         {/* App đang dùng giao diện sáng nên cố định theme="light" cho thông báo. */}
         <Toaster theme="dark" position="bottom-center" richColors closeButton />
       </body>

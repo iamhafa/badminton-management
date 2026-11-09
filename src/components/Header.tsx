@@ -1,27 +1,37 @@
 'use client';
 
-import { TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useBadminton } from '@/contexts/BadmintonContext';
 import { cn } from '@/libs/utils';
 import { Calculator, Cloud, CloudOff, History, LoaderCircle, Users } from 'lucide-react';
 import Image from 'next/image';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 
 export type TabKey = 'calculator' | 'roster' | 'history';
 export type CloudStatus = 'connecting' | 'online' | 'offline';
 
-const TABS: { key: TabKey; label: string; shortLabel: string; icon: typeof Calculator }[] = [
-  { key: 'calculator', label: 'Tính tiền buổi chơi', shortLabel: 'Tính tiền', icon: Calculator },
-  { key: 'roster', label: 'Thành viên CLB', shortLabel: 'Thành viên', icon: Users },
-  { key: 'history', label: 'Lịch sử các tuần', shortLabel: 'Lịch sử', icon: History },
-];
+const NAV_ITEMS = [
+  { href: '/', label: 'Tính tiền buổi chơi', shortLabel: 'Tính tiền', icon: Calculator, key: 'calculator' },
+  { href: '/roster', label: 'Thành viên CLB', shortLabel: 'Thành viên', icon: Users, key: 'roster' },
+  { href: '/history', label: 'Lịch sử các tuần', shortLabel: 'Lịch sử', icon: History, key: 'history' },
+] as const;
 
 interface HeaderProps {
-  cloudStatus: CloudStatus;
-  onRetryConnection: () => void;
+  cloudStatus?: CloudStatus;
+  onRetryConnection?: () => void;
   rosterCount?: number;
   historyCount?: number;
 }
 
-export default function Header({ cloudStatus, onRetryConnection, rosterCount = 0, historyCount = 0 }: HeaderProps) {
+export default function Header(props: HeaderProps) {
+  const pathname = usePathname();
+  const context = useBadminton();
+
+  const cloudStatus = props.cloudStatus ?? context.cloudStatus;
+  const onRetryConnection = props.onRetryConnection ?? context.retryConnection;
+  const rosterCount = props.rosterCount ?? context.roster.length;
+  const historyCount = props.historyCount ?? context.sessions.length;
+
   const tabCounts: Record<TabKey, number | undefined> = {
     calculator: undefined,
     roster: rosterCount,
@@ -62,29 +72,41 @@ export default function Header({ cloudStatus, onRetryConnection, rosterCount = 0
           </div>
         </div>
 
-        {/* Right: Tabs segmented control */}
-        <TabsList className="flex h-auto w-full sm:w-auto items-center justify-between sm:justify-start rounded-lg bg-[#075334] p-1 border border-emerald-600/40 gap-1 overflow-x-auto no-scrollbar">
-          {TABS.map(({ key, label, shortLabel, icon: Icon }) => (
-            <TabsTrigger
-              key={key}
-              value={key}
-              className={cn(
-                'flex flex-1 sm:flex-none shrink-0 items-center justify-center gap-1 sm:gap-1.5 rounded-md px-2 sm:px-3 py-1.5 text-xs font-medium text-emerald-100 transition-all',
-                'hover:text-white',
-                'data-active:bg-white data-active:text-gray-900 data-active:font-semibold data-active:shadow-sm',
-              )}
-            >
-              <Icon className="size-3.5 shrink-0" />
-              <span className="hidden sm:inline">{label}</span>
-              <span className="sm:hidden">{shortLabel}</span>
-              {tabCounts[key] !== undefined && (
-                <span className="inline-flex items-center justify-center rounded-full bg-[#0a6c44] data-active:bg-emerald-100 data-active:text-emerald-800 text-white px-1.5 py-0.2 text-[10px] font-bold">
-                  {tabCounts[key]}
-                </span>
-              )}
-            </TabsTrigger>
-          ))}
-        </TabsList>
+        {/* Right: Tabs segmented control navigation */}
+        <nav
+          aria-label="Tabs"
+          className="flex h-auto w-full sm:w-auto items-center justify-between sm:justify-start rounded-lg bg-[#075334] p-1 border border-emerald-600/40 gap-1 overflow-x-auto no-scrollbar"
+        >
+          {NAV_ITEMS.map(({ href, key, label, shortLabel, icon: Icon }) => {
+            const isActive = href === '/' ? pathname === '/' || pathname === '/calculator' : pathname.startsWith(href);
+            return (
+              <Link
+                key={href}
+                href={href}
+                className={cn(
+                  'flex flex-1 sm:flex-none shrink-0 items-center justify-center gap-1 sm:gap-1.5 rounded-md px-2 sm:px-3 py-1.5 text-xs font-medium transition-all select-none',
+                  isActive
+                    ? 'bg-white text-gray-900 font-semibold shadow-sm'
+                    : 'text-emerald-100 hover:text-white hover:bg-emerald-800/40',
+                )}
+              >
+                <Icon className="size-3.5 shrink-0" />
+                <span className="hidden sm:inline">{label}</span>
+                <span className="sm:hidden">{shortLabel}</span>
+                {tabCounts[key] !== undefined && (
+                  <span
+                    className={cn(
+                      'inline-flex items-center justify-center rounded-full px-1.5 py-0.2 text-[10px] font-bold',
+                      isActive ? 'bg-emerald-100 text-emerald-800' : 'bg-[#0a6c44] text-white',
+                    )}
+                  >
+                    {tabCounts[key]}
+                  </span>
+                )}
+              </Link>
+            );
+          })}
+        </nav>
       </div>
     </header>
   );

@@ -2,6 +2,9 @@ export type Gender = 'MALE' | 'FEMALE';
 
 export type MemberType = 'REGULAR' | 'GUEST';
 
+// Nguồn của khách vãng lai: Bạn bè/người quen hoặc tuyển từ Facebook
+export type GuestSource = 'FRIEND' | 'FACEBOOK';
+
 // Vai trò trong CLB: Trưởng nhóm (đặt sân, mua cầu) và Phó nhóm. Mỗi vai trò chỉ 1 người.
 export type MemberRole = 'LEADER' | 'VICE_LEADER';
 
@@ -11,8 +14,10 @@ export interface Player {
   name: string;
   gender: Gender;
   type: MemberType;
+  guestSource?: GuestSource; // Dành riêng cho khách vãng lai (mặc định: 'FRIEND')
   role?: MemberRole; // Chỉ dành cho thành viên cố định
   active?: boolean; // Dùng cho thành viên cố định khi tick chọn đi đánh hôm đó
+  drinksWater?: boolean; // Có uống nước lọc chung hay không (mặc định: true)
 }
 
 // Đầu vào form tính tiền
@@ -24,13 +29,15 @@ export interface SessionInput {
   tubePrice: number; // Giá 1 ống 12 quả (VD: 300000)
   shuttlesUsed: number; // Số quả đã dùng (VD: 5)
   waterFee: number; // Tiền nước lọc (VD: 40000)
-  waterPayerId: string; // 'ORGANIZER' hoặc ID của người chơi ứng tiền mua nước
+  waterPayerId: string; // ID của người chơi ứng tiền mua nước
   femaleCap: number; // Mức trần ưu tiên nữ (VD: 50000)
 }
 
 // Kết quả chi tiết từng người sau khi tính toán
 export interface PlayerBreakdown extends Player {
-  baseShare: number; // Số tiền gốc theo giới tính (chưa trừ tiền nước)
+  courtAndShuttleShare: number; // Tiền sân + tiền cầu
+  waterShare: number; // Tiền nước người này phải trả (0 nếu không uống nước)
+  baseShare: number; // Số tiền gốc theo giới tính + tiền nước (chưa trừ tiền ứng)
   waterCredit: number; // Tiền nước đã ứng (nếu người này mua nước)
   rawNetPayable: number; // baseShare - waterCredit (chưa làm tròn)
   roundedPayable: number; // Số tiền cuối cùng sau khi làm tròn (<500 xuống, >=500 lên)
@@ -44,6 +51,8 @@ export interface SessionBill extends SessionInput {
   title: string; // VD: "Chủ Nhật, ngày 08/11/2026"
   shuttleTotalCost: number; // (tubePrice / 12) * shuttlesUsed
   totalCost: number; // courtFee + shuttleTotalCost + waterFee
+  waterDrinkersCount: number; // Số người có uống nước
+  waterPerPerson: number; // Tiền nước chia trên mỗi người uống
   roundedFemaleUnit: number;
   roundedMaleUnit: number;
   totalCount: number;

@@ -1,5 +1,4 @@
 import { buildSessionTitle, formatDateVN } from './date-utils';
-import { ORGANIZER_ID } from '@/types/badminton';
 import type { Player, PlayerBreakdown, SessionBill, SessionInput } from '@/types/badminton';
 
 export const SHUTTLES_PER_TUBE = 12;
@@ -50,15 +49,30 @@ export function calculateBill(input: SessionInput, players: Player[], createdAt 
   const totalCount = maleCount + femaleCount;
 
   const shuttleTotalCost = calcShuttleCost(input.tubePrice, input.shuttlesUsed);
-  const totalCost = input.courtFee + shuttleTotalCost + input.waterFee;
-  const { maleShare, femaleShare } = calcGenderShares(totalCost, maleCount, femaleCount, input.femaleCap);
+  const courtAndShuttleCost = input.courtFee + shuttleTotalCost;
+  const totalCost = courtAndShuttleCost + input.waterFee;
+
+  // Phân bổ phí sân + cầu cho Nam / Nữ theo mức trần ưu tiên nữ
+  const { maleShare, femaleShare } = calcGenderShares(courtAndShuttleCost, maleCount, femaleCount, input.femaleCap);
+
+  // Phân bổ tiền nước lọc: chỉ chia cho những người có uống nước
+  const waterDrinkers = players.filter((p) => p.drinksWater !== false);
+  const waterDrinkersCount = waterDrinkers.length;
+  const waterPerPerson = waterDrinkersCount > 0 && input.waterFee > 0 ? input.waterFee / waterDrinkersCount : 0;
 
   const playerBreakdowns: PlayerBreakdown[] = players.map((player) => {
-    const baseShare = player.gender === 'FEMALE' ? femaleShare : maleShare;
-    const waterCredit = input.waterPayerId !== ORGANIZER_ID && input.waterPayerId === player.id ? input.waterFee : 0;
+    const drinksWater = player.drinksWater !== false;
+    const courtAndShuttleShare = player.gender === 'FEMALE' ? femaleShare : maleShare;
+    const waterShare = drinksWater ? waterPerPerson : 0;
+    const baseShare = courtAndShuttleShare + waterShare;
+    const waterCredit = input.waterPayerId && input.waterPayerId === player.id ? input.waterFee : 0;
     const rawNetPayable = baseShare - waterCredit;
+
     return {
       ...player,
+      drinksWater,
+      courtAndShuttleShare,
+      waterShare,
       baseShare,
       waterCredit,
       rawNetPayable,
@@ -73,8 +87,10 @@ export function calculateBill(input: SessionInput, players: Player[], createdAt 
     title: buildSessionTitle(input.isoDate),
     shuttleTotalCost,
     totalCost,
-    roundedFemaleUnit: roundToThousand(femaleShare),
-    roundedMaleUnit: roundToThousand(maleShare),
+    waterDrinkersCount,
+    waterPerPerson,
+    roundedFemaleUnit: roundToThousand(femaleShare + waterPerPerson),
+    roundedMaleUnit: roundToThousand(maleShare + waterPerPerson),
     totalCount,
     maleCount,
     femaleCount,
@@ -114,7 +130,11 @@ export function buildMessengerText(bill: SessionBill): string {
   lines.push(
     `• Tiền cầu${brand} (${bill.shuttlesUsed} quả × ${formatVND(bill.tubePrice / SHUTTLES_PER_TUBE)}): ${formatVND(bill.shuttleTotalCost)}`,
   );
-  if (bill.waterFee > 0) lines.push(`• Nước lọc: ${formatVND(bill.waterFee)}`);
+  if (bill.waterFee > 0) {
+    const drinkerInfo =
+      bill.waterDrinkersCount < bill.totalCount ? ` (${bill.waterDrinkersCount}/${bill.totalCount} người uống)` : '';
+    lines.push(`• Nước lọc: ${formatVND(bill.waterFee)}${drinkerInfo}`);
+  }
   lines.push(`➡️ Tổng: ${formatVND(bill.totalCost)}`);
   lines.push('');
   lines.push(`👥 ${bill.totalCount} người (${bill.maleCount} nam, ${bill.femaleCount} nữ)`);
@@ -126,7 +146,8 @@ export function buildMessengerText(bill: SessionBill): string {
     const tags = [genderLabel(p.gender)];
     if (p.role === 'LEADER') tags.unshift('👑 Trưởng nhóm');
     if (p.role === 'VICE_LEADER') tags.unshift('🛡️ Phó nhóm');
-    if (p.type === 'GUEST') tags.push('vãng lai');
+    if (p.type === 'GUEST') tags.push(p.guestSource === 'FACEBOOK' ? 'vãng lai FB' : 'vãng lai');
+    if (p.drinksWater === false && bill.waterFee > 0) tags.push('không nước');
     if (p.waterCredit > 0) tags.push(`đã ứng nước ${formatVND(p.waterCredit)}`);
     lines.push(`${index + 1}. ${p.name} (${tags.join(', ')}): ${describePayable(p.roundedPayable)}`);
   });
