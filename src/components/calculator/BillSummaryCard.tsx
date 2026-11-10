@@ -2,8 +2,8 @@
 
 import { describePayable, formatVND, sumRoundedPayable } from '@/libs/calculator';
 import { cn } from '@/libs/utils';
-import type { SessionBill } from '@/types/badminton';
-import { CalendarDays, Clock, LoaderCircle, Save } from 'lucide-react';
+import type { PlayerBreakdown, SessionBill } from '@/types/badminton';
+import { CalendarDays, Clock, LoaderCircle, MapPin, Save, UsersRound } from 'lucide-react';
 import { useState } from 'react';
 import RoleBadge from '../RoleBadge';
 
@@ -11,17 +11,21 @@ interface BillSummaryCardProps {
   bill: SessionBill;
   onSave: () => Promise<void>;
   cloudOnline: boolean;
+  /** Lý do chưa được lưu (VD: chưa chọn sân). Có giá trị thì nút Lưu bị khóa. */
+  saveBlockedReason?: string;
 }
 
-export default function BillSummaryCard({ bill, onSave, cloudOnline }: BillSummaryCardProps) {
+export default function BillSummaryCard({ bill, onSave, cloudOnline, saveBlockedReason }: BillSummaryCardProps) {
   const [saving, setSaving] = useState(false);
 
   const hasPlayers = bill.totalCount > 0;
   const collected = sumRoundedPayable(bill);
   const avgPerPerson = hasPlayers ? Math.round(bill.totalCost / bill.totalCount) : 0;
   const isCapInEffect = bill.maleCount > 0 && bill.femaleCount > 0 && bill.roundedFemaleUnit < bill.roundedMaleUnit;
+  const canSave = hasPlayers && !saving && cloudOnline && !saveBlockedReason;
 
   async function handleSave() {
+    if (!canSave) return;
     setSaving(true);
     try {
       await onSave();
@@ -45,10 +49,22 @@ export default function BillSummaryCard({ bill, onSave, cloudOnline }: BillSumma
           </span>
         </div>
 
-        {/* Date row */}
-        <div className="flex items-center gap-2 text-sm font-semibold text-gray-200">
-          <CalendarDays className="size-4 text-[#34d399]" />
-          <span>{bill.title || 'Chưa chọn ngày'}</span>
+        {/* Date + group + court */}
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-2 text-sm font-semibold text-gray-200">
+            <CalendarDays className="size-4 shrink-0 text-[#34d399]" />
+            <span>{bill.title || 'Chưa chọn ngày'}</span>
+          </div>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-400">
+            <span className="flex items-center gap-1.5">
+              <UsersRound className="size-3.5 shrink-0 text-[#34d399]" />
+              {bill.groupName || 'Chưa chọn nhóm'}
+            </span>
+            <span className={cn('flex items-center gap-1.5', !bill.courtName && 'text-amber-400')}>
+              <MapPin className="size-3.5 shrink-0 text-[#34d399]" />
+              {bill.courtName || 'Chưa chọn sân'}
+            </span>
+          </div>
         </div>
 
         {/* Total cost + Average */}
@@ -137,7 +153,12 @@ export default function BillSummaryCard({ bill, onSave, cloudOnline }: BillSumma
           {hasPlayers ? (
             <>
               <div className="mb-2 flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-gray-400">
-                <span>CHI TIẾT TỪNG NGƯỜI CHƠI</span>
+                <span className="flex items-center gap-1.5">
+                  CHI TIẾT TỪNG NGƯỜI CHƠI
+                  <span className="rounded-md bg-gray-100 px-1.5 py-0.5 text-[10px] font-bold normal-case tracking-normal text-gray-600">
+                    {bill.totalCount} người
+                  </span>
+                </span>
                 <span className="text-[#059669]">SỐ TIỀN CẦN ĐÓNG</span>
               </div>
               <ul className="max-h-[480px] divide-y divide-gray-100 overflow-y-auto pr-1">
@@ -183,12 +204,26 @@ export default function BillSummaryCard({ bill, onSave, cloudOnline }: BillSumma
               </ul>
               {/* Rounding difference note */}
               {(() => {
-                const diff = collected - bill.totalCost;
-                return diff !== 0 ? (
-                  <p className="mt-1 text-[11px] text-gray-400">
-                    Thực thu: {formatVND(collected)} ({diff > 0 ? 'dư' : 'thiếu'} {formatVND(Math.abs(diff))})
-                  </p>
-                ) : null;
+                // Trừ phần đã ứng trước (vd: người mua nước) vì khoản đó đã được trả, không cần thu lại
+                const advanced: number = bill.playerBreakdowns.reduce((sum, p: PlayerBreakdown) => sum + p.waterCredit, 0);
+                const expected: number = bill.totalCost - advanced;
+                const diff: number = collected - expected;
+                if (diff === 0) return null;
+
+                const advancer: PlayerBreakdown | undefined = bill.playerBreakdowns.find((p) => p.waterCredit > 0);
+
+                return (
+                  <div className="mt-1 flex flex-col gap-0.5 text-[11px] leading-relaxed text-gray-400">
+                    <p>
+                      Tổng thu từ mọi người: <span className="font-semibold text-gray-500">{formatVND(collected)}</span>
+                      {' · '}Cần thu: <span className="font-semibold text-gray-500">{formatVND(expected)}</span>
+                      {advancer ? ` (đã trừ ${formatVND(advanced)} ${advancer.name} ứng trước)` : ''}
+                    </p>
+                    <p>
+                      {diff > 0 ? 'Dư' : 'Hụt'} {formatVND(Math.abs(diff))} vì số tiền của mỗi người được làm tròn về hàng nghìn.
+                    </p>
+                  </div>
+                );
               })()}
             </>
           ) : (
@@ -197,22 +232,23 @@ export default function BillSummaryCard({ bill, onSave, cloudOnline }: BillSumma
         </div>
 
         {/* Action Button */}
-        <div className="pt-1">
+        <div className="flex flex-col gap-1.5 pt-1">
           <button
             type="button"
             onClick={handleSave}
-            disabled={!hasPlayers || saving || !cloudOnline}
-            title={!cloudOnline ? 'Chưa kết nối Cloud' : undefined}
+            disabled={!canSave}
+            title={!cloudOnline ? 'Chưa kết nối Cloud' : saveBlockedReason}
             className={cn(
               'flex h-11 w-full items-center justify-center gap-2 rounded-xl text-xs font-bold text-white shadow-sm transition-all',
-              hasPlayers && !saving && cloudOnline
-                ? 'bg-[#059669] hover:bg-[#047857] active:bg-[#065f46]'
-                : 'bg-gray-300 cursor-not-allowed text-gray-500',
+              canSave ? 'bg-[#059669] hover:bg-[#047857] active:bg-[#065f46]' : 'bg-gray-300 cursor-not-allowed text-gray-500',
             )}
           >
             {saving ? <LoaderCircle className="size-4 animate-spin" /> : <Save className="size-4" />}
-            Lưu vào Lịch sử CLB
+            Lưu vào Lịch sử
           </button>
+          {hasPlayers && saveBlockedReason && (
+            <p className="text-center text-[11px] font-medium text-amber-600">{saveBlockedReason}</p>
+          )}
         </div>
       </div>
     </div>

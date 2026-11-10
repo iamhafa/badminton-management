@@ -1,0 +1,3 @@
+# Normalize all text files to LF on every OS (Windows/macOS), matching oxfmt output and Linux/Docker runtimes.
+* text=auto eol=lf
+

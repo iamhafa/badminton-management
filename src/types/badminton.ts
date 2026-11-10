@@ -20,13 +20,48 @@ export interface Player {
   drinksWater?: boolean; // Có uống nước lọc chung hay không (mặc định: true)
 }
 
+// Nhóm chơi cầu lông: mỗi nhóm có danh sách thành viên và mức trần nữ riêng
+export interface Group {
+  id: string;
+  name: string;
+  femaleCap: number; // Mức trần ưu tiên nữ mặc định của nhóm
+  defaultCourtId: string; // Sân hay chơi ('' nếu chưa chọn)
+  members: Player[];
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: string | null; // ISO khi bị ẩn, null khi đang dùng
+}
+
+// Sân cầu lông (dùng chung cho mọi nhóm)
+export interface Court {
+  id: string;
+  name: string;
+  address: string;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: string | null; // ISO khi bị ẩn, null khi đang dùng
+}
+
+// Loại quả cầu lông (dùng chung cho mọi nhóm). Mỗi ống có 12 quả.
+export interface Shuttlecock {
+  id: string;
+  name: string; // VD: "Thành Công", "Dabata"
+  tubePrice: number; // Giá 1 ống mặc định, điền sẵn khi chọn loại cầu (mỗi buổi vẫn nhập lại được)
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: string | null; // ISO khi bị ẩn, null khi đang dùng
+}
+
 // Đầu vào form tính tiền
 export interface SessionInput {
+  groupId: string; // Nhóm chơi buổi này
+  courtId: string; // Sân chơi buổi này (bắt buộc khi lưu)
   isoDate: string; // YYYY-MM-DD
   hoursPlayed: number; // Mặc định: 2
   courtFee: number; // Tiền sân (VD: 280000)
-  shuttleBrand: string; // Tên loại cầu (VD: "Thành Công", "Dabata")
-  tubePrice: number; // Giá 1 ống 12 quả (VD: 300000)
+  shuttlecockId: string; // Loại cầu của buổi này (bắt buộc khi lưu; '' với các buổi cũ)
+  shuttleBrand: string; // Tên loại cầu tại thời điểm tính (VD: "Thành Công"), lấy từ loại cầu đã chọn
+  tubePrice: number; // Giá 1 ống 12 quả của buổi này, nhập tay (VD: 300000)
   shuttlesUsed: number; // Số quả đã dùng (VD: 5)
   waterFee: number; // Tiền nước lọc (VD: 40000)
   waterPayerId: string; // ID của người chơi ứng tiền mua nước
@@ -47,6 +82,8 @@ export interface PlayerBreakdown extends Player {
 export interface SessionBill extends SessionInput {
   id?: string;
   createdAt: string;
+  groupName: string; // Tên nhóm tại thời điểm lưu (giữ nguyên khi nhóm bị đổi tên/ẩn)
+  courtName: string; // Tên sân tại thời điểm lưu ('' với các buổi cũ chưa có sân)
   dateFormatted: string; // DD/MM/YYYY
   title: string; // VD: "Chủ Nhật, ngày 08/11/2026"
   shuttleTotalCost: number; // (tubePrice / 12) * shuttlesUsed

@@ -3,57 +3,84 @@
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
-import { formatVND, SHUTTLES_PER_TUBE } from '@/libs/calculator';
+import { FEMALE_CAP_PRESETS, formatVND, SHUTTLES_PER_TUBE } from '@/libs/calculator';
 import { getWeekdayVN } from '@/libs/date-utils';
 import { cn } from '@/libs/utils';
-import type { Player, SessionInput } from '@/types/badminton';
-import { CalendarDays, Feather, Grid2X2, Minus, Plus, RotateCcw } from 'lucide-react';
+import type { Group, Player, SessionInput, Shuttlecock, Court } from '@/types/badminton';
+import { CalendarDays, Droplet, Feather, Grid2X2, MapPin, Minus, Plus, RotateCcw, UsersRound, Venus } from 'lucide-react';
+import Link from 'next/link';
 
 const COURT_FEE_PRESETS = [240000, 280000, 300000, 360000];
-const FEMALE_CAP_PRESETS = [40000, 50000, 60000];
 const WATER_FEE_PRESETS = [0, 35000, 40000, 50000];
 
-type ShuttlePreset = { brand: string; tubePrice: number };
-const SHUTTLE_PRESETS: ShuttlePreset[] = [
-  { brand: 'Thành Công', tubePrice: 300000 },
-  { brand: 'Dabata', tubePrice: 260000 },
-];
-
-const DEFAULT_INPUT_VALUES: Omit<SessionInput, 'isoDate'> = {
+// Giá trị mẫu khi bấm "Khôi phục mẫu ví dụ".
+// Giữ nguyên nhóm, sân, loại cầu và ngày chơi; mức trần nữ và giá ống lấy theo nhóm / loại cầu đang chọn.
+const DEFAULT_INPUT_VALUES: Omit<
+  SessionInput,
+  'isoDate' | 'groupId' | 'courtId' | 'femaleCap' | 'shuttlecockId' | 'shuttleBrand' | 'tubePrice'
+> = {
   hoursPlayed: 2,
   courtFee: 280000,
-  shuttleBrand: 'Thành Công',
-  tubePrice: 300000,
   shuttlesUsed: 5,
   waterFee: 40000,
   waterPayerId: '',
-  femaleCap: 50000,
 };
 
 interface SessionCostFormProps {
   input: SessionInput;
   onChange: (patch: Partial<SessionInput>) => void;
   participants: Player[];
+  /** Các nhóm đang dùng (chưa ẩn). */
+  groups: Group[];
+  /** Các sân đang dùng (chưa ẩn). */
+  courts: Court[];
+  /** Các loại cầu đang dùng (chưa ẩn). */
+  shuttlecocks: Shuttlecock[];
+  /** Đổi nhóm (trang cha có thể hỏi xác nhận trước khi xóa lựa chọn người chơi). */
+  onGroupChange: (groupId: string) => void;
 }
 
-export default function SessionCostForm({ input, onChange, participants }: SessionCostFormProps) {
+export default function SessionCostForm({
+  input,
+  onChange,
+  participants,
+  groups,
+  courts,
+  shuttlecocks,
+  onGroupChange,
+}: SessionCostFormProps) {
   const shuttleUnit = input.tubePrice / SHUTTLES_PER_TUBE;
   const shuttleTotalCost = shuttleUnit * input.shuttlesUsed;
   const weekday = getWeekdayVN(input.isoDate);
+  const groupFemaleCap = groups.find((g) => g.id === input.groupId)?.femaleCap;
+  const selectedShuttlecock = shuttlecocks.find((s) => s.id === input.shuttlecockId);
 
   function handleReset() {
-    onChange(DEFAULT_INPUT_VALUES);
+    onChange({
+      ...DEFAULT_INPUT_VALUES,
+      ...(groupFemaleCap ? { femaleCap: groupFemaleCap } : {}),
+      ...(selectedShuttlecock ? { tubePrice: selectedShuttlecock.tubePrice } : {}),
+    });
+  }
+
+  /** Chọn loại cầu: điền sẵn giá ống mặc định của loại đó, giá vẫn sửa được. */
+  function handleShuttlecockChange(id: string) {
+    const picked = shuttlecocks.find((s) => s.id === id);
+    onChange(picked ? { shuttlecockId: picked.id, tubePrice: picked.tubePrice } : { shuttlecockId: '' });
   }
 
   return (
     <div className="rounded-2xl bg-white p-3.5 sm:p-6 shadow-sm border border-gray-100 flex flex-col gap-4 sm:gap-5">
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-2 pb-1">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5">
           <span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-[#d1fae5] text-xs font-bold text-[#047857]">
             1
           </span>
-          <h2 className="text-sm sm:text-base font-bold text-gray-900 tracking-tight">Thông số chi phí buổi chơi</h2>
+          <div>
+            <h2 className="text-sm sm:text-base font-bold text-gray-900 tracking-tight">Thông số chi phí buổi chơi</h2>
+            <p className="text-xs text-gray-500">Chọn nhóm, sân và nhập chi phí của buổi chơi hôm nay</p>
+          </div>
         </div>
         <button
           type="button"
@@ -66,11 +93,88 @@ export default function SessionCostForm({ input, onChange, participants }: Sessi
         </button>
       </div>
 
+      {/* Row 0: Group + Court */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        {/* Nhóm */}
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="session-group" className="text-[11px] font-bold uppercase tracking-wider text-gray-500">
+            NHÓM
+          </Label>
+          <div className="relative">
+            <UsersRound className="pointer-events-none absolute left-3 top-1/2 z-10 size-4 -translate-y-1/2 text-gray-400" />
+            <NativeSelect
+              id="session-group"
+              value={input.groupId}
+              onChange={(e) => onGroupChange(e.target.value)}
+              disabled={groups.length === 0}
+              className="w-full [&_select]:h-10 [&_select]:pl-9 [&_select]:bg-white [&_select]:border-gray-200 [&_select]:rounded-lg [&_select]:font-semibold"
+            >
+              {groups.length === 0 ? (
+                <NativeSelectOption value="">Chưa có nhóm nào</NativeSelectOption>
+              ) : (
+                groups.map((g) => (
+                  <NativeSelectOption key={g.id} value={g.id}>
+                    {g.name}
+                  </NativeSelectOption>
+                ))
+              )}
+            </NativeSelect>
+          </div>
+          {groups.length === 0 && (
+            <p className="text-[11px] text-gray-500">
+              <Link href="/settings/groups" className="font-semibold text-[#059669] underline">
+                Tạo nhóm
+              </Link>{' '}
+              ở Cài đặt để bắt đầu tính tiền.
+            </p>
+          )}
+        </div>
+
+        {/* Sân chơi */}
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="session-court" className="text-[11px] font-bold uppercase tracking-wider text-gray-500">
+            SÂN CHƠI <span className="text-red-500">*</span>
+          </Label>
+          <div className="relative">
+            <MapPin className="pointer-events-none absolute left-3 top-1/2 z-10 size-4 -translate-y-1/2 text-gray-400" />
+            <NativeSelect
+              id="session-court"
+              value={input.courtId}
+              onChange={(e) => onChange({ courtId: e.target.value })}
+              aria-required="true"
+              aria-invalid={!input.courtId}
+              className={cn(
+                'w-full [&_select]:h-10 [&_select]:pl-9 [&_select]:bg-white [&_select]:rounded-lg [&_select]:font-semibold',
+                input.courtId ? '[&_select]:border-gray-200' : '[&_select]:border-amber-300',
+              )}
+            >
+              <NativeSelectOption value="">-- Chọn sân --</NativeSelectOption>
+              {courts.map((v) => (
+                <NativeSelectOption key={v.id} value={v.id}>
+                  {v.name}
+                </NativeSelectOption>
+              ))}
+            </NativeSelect>
+          </div>
+          {courts.length === 0 ? (
+            <p className="text-[11px] text-gray-500">
+              Chưa có sân nào.{' '}
+              <Link href="/settings/courts" className="font-semibold text-[#059669] underline">
+                Thêm sân
+              </Link>{' '}
+              ở Cài đặt.
+            </p>
+          ) : (
+            !input.courtId && <p className="text-[11px] text-amber-600">Bắt buộc chọn sân để lưu buổi chơi.</p>
+          )}
+        </div>
+      </div>
+
       {/* Row 1: Date + Hours */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {/* Ngày chơi */}
         <div className="flex flex-col gap-1.5">
-          <Label className="text-[11px] font-bold uppercase tracking-wider text-gray-500">NGÀY CHƠI (DD/MM/YYYY)</Label>
+          <Label className="text-[11px] font-bold uppercase tracking-wider text-gray-500">NGÀY CHƠI</Label>
           <div className="flex items-stretch gap-2">
             <div className="relative flex-1">
               <CalendarDays className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-gray-400" />
@@ -117,9 +221,9 @@ export default function SessionCostForm({ input, onChange, participants }: Sessi
 
       {/* Row 2: Court fee + Female cap */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        {/* 1. Tiền thuê sân */}
+        {/* Tiền thuê sân */}
         <div className="flex flex-col gap-1.5">
-          <Label className="text-[11px] font-bold uppercase tracking-wider text-gray-500">1. TIỀN THUÊ SÂN (VNĐ)</Label>
+          <Label className="text-[11px] font-bold uppercase tracking-wider text-gray-500">TIỀN THUÊ SÂN</Label>
           <div className="relative">
             <Grid2X2 className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-gray-400" />
             <Input
@@ -155,13 +259,11 @@ export default function SessionCostForm({ input, onChange, participants }: Sessi
           </div>
         </div>
 
-        {/* 5. Mức trần ưu tiên nữ */}
+        {/* Mức trần ưu tiên nữ */}
         <div className="flex flex-col gap-1.5">
-          <Label className="text-[11px] font-bold uppercase tracking-wider text-[#db2777]">5. MỨC TRẦN ƯU TIÊN NỮ (TỐI ĐA)</Label>
+          <Label className="text-[11px] font-bold uppercase tracking-wider text-[#db2777]">MỨC TRẦN ƯU TIÊN NỮ (TỐI ĐA)</Label>
           <div className="relative">
-            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-base font-bold text-[#ec4899]">
-              ♀
-            </span>
+            <Venus className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#ec4899]" />
             <Input
               inputMode="numeric"
               value={input.femaleCap ? input.femaleCap.toLocaleString('vi-VN') : ''}
@@ -204,38 +306,45 @@ export default function SessionCostForm({ input, onChange, participants }: Sessi
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <div className="flex items-center gap-1.5 text-xs font-bold text-[#b45309] uppercase tracking-wide">
             <Feather className="size-4 text-[#d97706] shrink-0" />
-            <span>2 &amp; 3. CHI PHÍ CẦU LÔNG ({SHUTTLES_PER_TUBE} QUẢ / ỐNG)</span>
-          </div>
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-[11px] text-gray-500">Chọn nhanh:</span>
-            {SHUTTLE_PRESETS.map((preset) => (
-              <button
-                key={preset.brand}
-                type="button"
-                onClick={() => onChange({ shuttleBrand: preset.brand, tubePrice: preset.tubePrice })}
-                className={cn(
-                  'rounded-full px-2.5 py-0.5 text-xs font-semibold border transition-all',
-                  input.shuttleBrand === preset.brand && input.tubePrice === preset.tubePrice
-                    ? 'bg-[#fef3c7] border-[#f59e0b] text-[#92400e]'
-                    : 'bg-white border-gray-200 text-gray-600 hover:bg-amber-50',
-                )}
-              >
-                {preset.brand} ({preset.tubePrice / 1000}k)
-              </button>
-            ))}
+            <span>CHI PHÍ CẦU LÔNG ({SHUTTLES_PER_TUBE} QUẢ / ỐNG)</span>
           </div>
         </div>
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          {/* Tên loại cầu */}
+          {/* Loại cầu */}
           <div className="flex flex-col gap-1">
-            <Label className="text-[11px] font-medium text-gray-600">Tên loại cầu</Label>
-            <Input
-              value={input.shuttleBrand}
-              onChange={(e) => onChange({ shuttleBrand: e.target.value })}
-              placeholder="VD: Thành Công"
-              className="h-9 bg-white border-gray-200 font-medium"
-            />
+            <Label htmlFor="session-shuttlecock" className="text-[11px] font-medium text-gray-600">
+              Loại cầu <span className="text-red-500">*</span>
+            </Label>
+            <NativeSelect
+              id="session-shuttlecock"
+              value={input.shuttlecockId}
+              onChange={(e) => handleShuttlecockChange(e.target.value)}
+              aria-required="true"
+              aria-invalid={!input.shuttlecockId}
+              className={cn(
+                'w-full [&_select]:h-9 [&_select]:bg-white [&_select]:rounded-md [&_select]:font-medium',
+                input.shuttlecockId ? '[&_select]:border-gray-200' : '[&_select]:border-amber-300',
+              )}
+            >
+              <NativeSelectOption value="">-- Chọn loại cầu --</NativeSelectOption>
+              {shuttlecocks.map((s) => (
+                <NativeSelectOption key={s.id} value={s.id}>
+                  {s.name}
+                </NativeSelectOption>
+              ))}
+            </NativeSelect>
+            {shuttlecocks.length === 0 ? (
+              <p className="text-[11px] text-gray-500">
+                Chưa có loại cầu nào.{' '}
+                <Link href="/settings/shuttlecocks" className="font-semibold text-[#059669] underline">
+                  Thêm loại cầu
+                </Link>{' '}
+                ở Cài đặt.
+              </p>
+            ) : (
+              !input.shuttlecockId && <p className="text-[11px] text-amber-600">Bắt buộc chọn loại cầu để lưu buổi chơi.</p>
+            )}
           </div>
 
           {/* Giá 1 ống */}
@@ -292,8 +401,8 @@ export default function SessionCostForm({ input, onChange, participants }: Sessi
       {/* Tiền nước lọc (Card xanh dương) */}
       <div className="rounded-xl border border-[#bfdbfe] bg-[#f0f7ff] p-3.5 sm:p-4 flex flex-col gap-3">
         <div className="flex items-center gap-1.5 text-xs font-bold text-[#1d4ed8] uppercase tracking-wide">
-          <span className="text-sm">🚰</span>
-          <span>4. TIỀN NƯỚC LỌC</span>
+          <Droplet className="size-4 text-[#2563eb] shrink-0" />
+          <span>TIỀN NƯỚC LỌC</span>
         </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

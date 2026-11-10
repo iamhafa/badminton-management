@@ -6,15 +6,17 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { buildMessengerText, describePayable, formatVND } from '@/libs/calculator';
 import { formatDateTimeVN } from '@/libs/date-utils';
 import { cn, copyToClipboard } from '@/libs/utils';
-import type { SessionBill } from '@/types/badminton';
-import { Check, ChevronDown, Copy, LoaderCircle, RotateCcw, Trash2 } from 'lucide-react';
-import { useState } from 'react';
+import type { Group, SessionBill } from '@/types/badminton';
+import { Check, ChevronDown, Copy, LoaderCircle, MapPin, RotateCcw, Trash2, UsersRound } from 'lucide-react';
+import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { useConfirm } from '../../hooks/useConfirm';
 import RoleBadge, { GenderTag } from '../RoleBadge';
 
 interface HistoryListProps {
   sessions: SessionBill[];
+  /** Tất cả nhóm (gồm cả nhóm đã ẩn) để hiện tên và bộ lọc. */
+  groups: Group[];
   loading: boolean;
   error: string | null;
   cloudOnline: boolean;
@@ -22,14 +24,35 @@ interface HistoryListProps {
   onDelete: (id: string) => Promise<void>;
 }
 
-export default function HistoryList({ sessions, loading, error, cloudOnline, onRefresh, onDelete }: HistoryListProps) {
+const ALL_GROUPS = '__all__';
+
+export default function HistoryList({ sessions, groups, loading, error, cloudOnline, onRefresh, onDelete }: HistoryListProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [groupFilter, setGroupFilter] = useState<string>(ALL_GROUPS);
   const { confirm, confirmDialog } = useConfirm();
 
+  /** Tên nhóm lưu trong buổi chơi; nếu thiếu thì lấy tên hiện tại của nhóm. */
+  function groupNameOf(bill: SessionBill): string {
+    return bill.groupName || groups.find((g) => g.id === bill.groupId)?.name || 'Không rõ nhóm';
+  }
+
+  // Bộ lọc chỉ gồm các nhóm có buổi chơi đã lưu, theo thứ tự nhóm.
+  const filterOptions = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const s of sessions) counts.set(s.groupId, (counts.get(s.groupId) ?? 0) + 1);
+    const known = groups.filter((g) => counts.has(g.id)).map((g) => ({ id: g.id, name: g.name, count: counts.get(g.id)! }));
+    const unknown = [...counts.keys()]
+      .filter((id) => !groups.some((g) => g.id === id))
+      .map((id) => ({ id, name: sessions.find((s) => s.groupId === id)?.groupName || 'Không rõ nhóm', count: counts.get(id)! }));
+    return [...known, ...unknown];
+  }, [sessions, groups]);
+
+  const visibleSessions = groupFilter === ALL_GROUPS ? sessions : sessions.filter((s) => s.groupId === groupFilter);
+
   async function handleCopy(bill: SessionBill) {
-    if (await copyToClipboard(buildMessengerText(bill))) {
+    if (await copyToClipboard(buildMessengerText({ ...bill, groupName: groupNameOf(bill) }))) {
       setCopiedId(bill.id ?? null);
       toast.success('Đã copy bill, dán vào Messenger nhé!');
       setTimeout(() => setCopiedId(null), 2000);
@@ -61,23 +84,44 @@ export default function HistoryList({ sessions, loading, error, cloudOnline, onR
   return (
     <section className="mx-auto flex w-full max-w-3xl flex-col gap-3">
       <div className="flex items-center justify-between">
-        <h2 className="text-base font-semibold">Lịch sử buổi chơi ({sessions.length})</h2>
+        <h2 className="text-base font-semibold">Lịch sử buổi chơi ({visibleSessions.length})</h2>
         <Button variant="ghost" size="sm" onClick={onRefresh} disabled={loading || !cloudOnline}>
           <RotateCcw className={cn(loading && 'animate-spin')} /> Tải lại
         </Button>
       </div>
 
+      {filterOptions.length > 1 && (
+        <div className="flex flex-wrap gap-1.5" role="group" aria-label="Lọc theo nhóm">
+          {[{ id: ALL_GROUPS, name: 'Tất cả', count: sessions.length }, ...filterOptions].map((opt) => (
+            <button
+              key={opt.id}
+              type="button"
+              onClick={() => setGroupFilter(opt.id)}
+              aria-pressed={groupFilter === opt.id}
+              className={cn(
+                'rounded-full border px-3 py-1 text-xs font-semibold transition-colors',
+                groupFilter === opt.id
+                  ? 'border-[#0a6c44] bg-[#0a6c44] text-white'
+                  : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50',
+              )}
+            >
+              {opt.name} ({opt.count})
+            </button>
+          ))}
+        </div>
+      )}
+
       {error && <p className="text-sm text-destructive">{error}</p>}
 
       {loading && sessions.length === 0 ? (
         <p className="text-sm text-muted-foreground">Đang tải lịch sử...</p>
-      ) : sessions.length === 0 ? (
+      ) : visibleSessions.length === 0 ? (
         <Card className="border border-dashed ring-0">
           <CardContent className="text-center text-muted-foreground">Chưa có buổi chơi nào được lưu.</CardContent>
         </Card>
       ) : (
         <ul className="flex flex-col gap-3">
-          {sessions.map((bill) => {
+          {visibleSessions.map((bill) => {
             const expanded = expandedId === bill.id;
             return (
               <li key={bill.id}>
@@ -86,6 +130,16 @@ export default function HistoryList({ sessions, loading, error, cloudOnline, onR
                     <CollapsibleTrigger className="flex w-full items-center gap-3 p-4 text-left hover:bg-muted/50">
                       <div className="min-w-0 flex-1">
                         <div className="font-semibold">{bill.title}</div>
+                        <div className="flex flex-wrap items-center gap-x-3 text-xs text-muted-foreground">
+                          <span className="flex items-center gap-1">
+                            <UsersRound className="size-3" />
+                            {groupNameOf(bill)}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <MapPin className="size-3" />
+                            {bill.courtName || 'Chưa rõ sân'}
+                          </span>
+                        </div>
                         <div className="text-xs text-muted-foreground">
                           {bill.totalCount} người ({bill.maleCount} nam, {bill.femaleCount} nữ) · Nam{' '}
                           {formatVND(bill.roundedMaleUnit)} · Nữ {formatVND(bill.roundedFemaleUnit)}

@@ -3,6 +3,9 @@ import type { Player, PlayerBreakdown, SessionBill, SessionInput } from '@/types
 
 export const SHUTTLES_PER_TUBE = 12;
 
+/** Các mức trần nữ chọn nhanh (dùng ở form tính tiền và form nhóm). */
+export const FEMALE_CAP_PRESETS = [40000, 50000, 60000];
+
 /** Làm tròn hàng nghìn: phần lẻ < 500đ làm tròn xuống, >= 500đ làm tròn lên. */
 export function roundToThousand(amount: number): number {
   const sign = amount < 0 ? -1 : 1;
@@ -43,7 +46,12 @@ export function calcGenderShares(
 }
 
 /** Tính toàn bộ bill cho 1 buổi chơi. `players` là danh sách người đã tham gia (cố định + vãng lai). */
-export function calculateBill(input: SessionInput, players: Player[], createdAt = ''): SessionBill {
+export function calculateBill(
+  input: SessionInput,
+  players: Player[],
+  createdAt = '',
+  names: { groupName: string; courtName: string } = { groupName: '', courtName: '' },
+): SessionBill {
   let maleCount = 0;
   let femaleCount = 0;
   let waterDrinkersCount = 0;
@@ -89,6 +97,8 @@ export function calculateBill(input: SessionInput, players: Player[], createdAt 
   return {
     ...input,
     createdAt,
+    groupName: names.groupName,
+    courtName: names.courtName,
     dateFormatted: formatDateVN(input.isoDate),
     title: buildSessionTitle(input.isoDate),
     shuttleTotalCost,
@@ -128,6 +138,8 @@ export function describePayable(amount: number): string {
 export function buildMessengerText(bill: SessionBill): string {
   const lines: string[] = [];
   lines.push(`🏸 TIỀN CẦU LÔNG - ${bill.title.toUpperCase()}`);
+  if (bill.groupName) lines.push(`👥 Nhóm: ${bill.groupName}`);
+  if (bill.courtName) lines.push(`📍 Sân: ${bill.courtName}`);
   lines.push(`⏱ Thời gian chơi: ${bill.hoursPlayed} giờ`);
   lines.push('');
   lines.push('💰 CHI PHÍ:');

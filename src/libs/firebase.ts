@@ -14,7 +14,7 @@ import {
   type Firestore,
 } from 'firebase/firestore';
 import moment from 'moment';
-import type { Player, SessionBill } from '@/types/badminton';
+import type { Group, Player, SessionBill, Shuttlecock, Court } from '@/types/badminton';
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -25,9 +25,22 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-const ROSTER_COLLECTION = 'club_settings';
-const ROSTER_DOC_ID = 'regular_roster';
+// Dữ liệu cũ (1 danh sách thành viên duy nhất). Chỉ còn đọc để chuyển sang nhóm đầu tiên.
+const LEGACY_ROSTER_COLLECTION = 'club_settings';
+const LEGACY_ROSTER_DOC_ID = 'regular_roster';
+
+// Dữ liệu cũ của sân (trước đây gọi là venues). Chỉ còn đọc để chuyển sang collection courts.
+const LEGACY_VENUES_COLLECTION = 'venues';
+
+const GROUPS_COLLECTION = 'groups';
+const COURTS_COLLECTION = 'courts';
+const SHUTTLECOCKS_COLLECTION = 'shuttlecocks';
 const SESSIONS_COLLECTION = 'sessions';
+
+/** Nhóm được tạo từ danh sách thành viên cũ. Các buổi chơi cũ (chưa có groupId) thuộc nhóm này. */
+export const LEGACY_GROUP_ID = 'vut-cau-long';
+const LEGACY_GROUP_NAME = 'Vụt Cầu Lông';
+const DEFAULT_FEMALE_CAP = 50000;
 
 let app: FirebaseApp | undefined;
 let db: Firestore | undefined;
@@ -45,27 +58,155 @@ function getDb(): Firestore {
   return db;
 }
 
-// ---------- Thành viên cố định: club_settings/regular_roster ----------
-
-export async function fetchRoster(): Promise<Player[]> {
-  const snap = await getDoc(doc(getDb(), ROSTER_COLLECTION, ROSTER_DOC_ID));
-  if (!snap.exists()) return [];
-  const data = snap.data() as { members?: Player[] };
-  return Array.isArray(data.members) ? data.members : [];
+function nowIso(): string {
+  return moment().toISOString();
 }
 
-export async function saveRoster(members: Player[]): Promise<void> {
-  const cleaned: Player[] = members.map(({ id, name, gender, role }) => ({
+/** Chỉ giữ các field cần lưu của thành viên cố định. */
+function cleanMembers(members: Player[]): Player[] {
+  return members.map(({ id, name, gender, role }) => ({
     id,
     name,
     gender,
     type: 'REGULAR',
     role, // undefined sẽ được bỏ qua (ignoreUndefinedProperties)
   }));
-  await setDoc(doc(getDb(), ROSTER_COLLECTION, ROSTER_DOC_ID), {
-    members: cleaned,
-    updatedAt: moment().toISOString(),
-  });
+}
+
+// ---------- Nhóm: groups/{id} ----------
+
+function toGroup(id: string, data: Partial<Group> & { defaultVenueId?: string }): Group {
+  return {
+    id,
+    name: data.name ?? '',
+    femaleCap: typeof data.femaleCap === 'number' ? data.femaleCap : DEFAULT_FEMALE_CAP,
+    // defaultVenueId là tên field cũ của defaultCourtId
+    defaultCourtId: data.defaultCourtId ?? data.defaultVenueId ?? '',
+    members: Array.isArray(data.members) ? data.members : [],
+    createdAt: data.createdAt ?? '',
+    updatedAt: data.updatedAt ?? '',
+    deletedAt: data.deletedAt ?? null,
+  };
+}
+
+async function fetchLegacyRoster(): Promise<Player[]> {
+  const snap = await getDoc(doc(getDb(), LEGACY_ROSTER_COLLECTION, LEGACY_ROSTER_DOC_ID));
+  if (!snap.exists()) return [];
+  const data = snap.data() as { members?: Player[] };
+  return Array.isArray(data.members) ? data.members : [];
+}
+
+/**
+ * Lấy danh sách nhóm (gồm cả nhóm đã ẩn), sắp theo thời gian tạo.
+ * Lần đầu chưa có nhóm nào: tạo nhóm "Vụt Cầu Lông" từ danh sách thành viên cũ.
+ * Document cũ club_settings/regular_roster được giữ nguyên.
+ */
+export async function fetchGroups(): Promise<Group[]> {
+  const snap = await getDocs(collection(getDb(), GROUPS_COLLECTION));
+  if (!snap.empty) {
+    return snap.docs.map((d) => toGroup(d.id, d.data() as Partial<Group>)).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  }
+
+  const now = nowIso();
+  const firstGroup: Group = {
+    id: LEGACY_GROUP_ID,
+    name: LEGACY_GROUP_NAME,
+    femaleCap: DEFAULT_FEMALE_CAP,
+    defaultCourtId: '',
+    members: cleanMembers(await fetchLegacyRoster()),
+    createdAt: now,
+    updatedAt: now,
+    deletedAt: null,
+  };
+  await saveGroup(firstGroup);
+  return [firstGroup];
+}
+
+/** Tạo mới hoặc ghi đè toàn bộ 1 nhóm (id do client sinh). */
+export async function saveGroup(group: Group): Promise<void> {
+  const { id, ...data } = group;
+  await setDoc(doc(getDb(), GROUPS_COLLECTION, id), { ...data, members: cleanMembers(data.members) });
+}
+
+// ---------- Sân: courts/{id} ----------
+
+function toCourt(id: string, data: Partial<Court>): Court {
+  return {
+    id,
+    name: data.name ?? '',
+    address: data.address ?? '',
+    createdAt: data.createdAt ?? '',
+    updatedAt: data.updatedAt ?? '',
+    deletedAt: data.deletedAt ?? null,
+  };
+}
+
+/**
+ * Lấy danh sách sân (gồm cả sân đã ẩn), sắp theo tên.
+ * Lần đầu chưa có sân nào trong courts: sao chép các sân từ collection cũ venues (giữ nguyên id).
+ * Collection venues được giữ nguyên, không bị xóa.
+ */
+export async function fetchCourts(): Promise<Court[]> {
+  const snap = await getDocs(collection(getDb(), COURTS_COLLECTION));
+  if (!snap.empty) {
+    return snap.docs.map((d) => toCourt(d.id, d.data() as Partial<Court>)).sort((a, b) => a.name.localeCompare(b.name, 'vi'));
+  }
+
+  const legacySnap = await getDocs(collection(getDb(), LEGACY_VENUES_COLLECTION));
+  const migrated = legacySnap.docs.map((d) => toCourt(d.id, d.data() as Partial<Court>));
+  await Promise.all(migrated.map(saveCourt));
+  return migrated.sort((a, b) => a.name.localeCompare(b.name, 'vi'));
+}
+
+/** Tạo mới hoặc ghi đè toàn bộ 1 sân (id do client sinh). */
+export async function saveCourt(court: Court): Promise<void> {
+  const { id, ...data } = court;
+  await setDoc(doc(getDb(), COURTS_COLLECTION, id), data);
+}
+
+// ---------- Loại cầu: shuttlecocks/{id} ----------
+
+/** Hai loại cầu từng được ghi cứng trong form tính tiền, dùng để tạo danh mục lần đầu. */
+const DEFAULT_SHUTTLECOCKS: ReadonlyArray<Pick<Shuttlecock, 'id' | 'name' | 'tubePrice'>> = [
+  { id: 'thanh-cong', name: 'Thành Công', tubePrice: 300000 },
+  { id: 'dabata', name: 'Dabata', tubePrice: 260000 },
+];
+
+function toShuttlecock(id: string, data: Partial<Shuttlecock>): Shuttlecock {
+  return {
+    id,
+    name: data.name ?? '',
+    tubePrice: typeof data.tubePrice === 'number' ? data.tubePrice : 0,
+    createdAt: data.createdAt ?? '',
+    updatedAt: data.updatedAt ?? '',
+    deletedAt: data.deletedAt ?? null,
+  };
+}
+
+function sortByName<T extends { name: string }>(list: T[]): T[] {
+  return list.sort((a, b) => a.name.localeCompare(b.name, 'vi'));
+}
+
+/**
+ * Lấy danh sách loại cầu (gồm cả loại đã ẩn), sắp theo tên.
+ * Lần đầu chưa có loại nào: tạo sẵn "Thành Công" và "Dabata".
+ */
+export async function fetchShuttlecocks(): Promise<Shuttlecock[]> {
+  const snap = await getDocs(collection(getDb(), SHUTTLECOCKS_COLLECTION));
+  if (!snap.empty) {
+    return sortByName(snap.docs.map((d) => toShuttlecock(d.id, d.data() as Partial<Shuttlecock>)));
+  }
+
+  const now = nowIso();
+  const seeded: Shuttlecock[] = DEFAULT_SHUTTLECOCKS.map((s) => ({ ...s, createdAt: now, updatedAt: now, deletedAt: null }));
+  await Promise.all(seeded.map(saveShuttlecock));
+  return sortByName(seeded);
+}
+
+/** Tạo mới hoặc ghi đè toàn bộ 1 loại cầu (id do client sinh). */
+export async function saveShuttlecock(shuttlecock: Shuttlecock): Promise<void> {
+  const { id, ...data } = shuttlecock;
+  await setDoc(doc(getDb(), SHUTTLECOCKS_COLLECTION, id), data);
 }
 
 // ---------- Lịch sử buổi chơi: sessions/{id} ----------
@@ -73,7 +214,20 @@ export async function saveRoster(members: Player[]): Promise<void> {
 export async function fetchSessions(): Promise<SessionBill[]> {
   const q = query(collection(getDb(), SESSIONS_COLLECTION), orderBy('createdAt', 'desc'));
   const snap = await getDocs(q);
-  return snap.docs.map((d) => ({ ...(d.data() as SessionBill), id: d.id }));
+  return snap.docs.map((d) => {
+    // venueId / venueName là tên field cũ của courtId / courtName
+    const { venueId, venueName, ...data } = d.data() as Partial<SessionBill> & { venueId?: string; venueName?: string };
+    // Buổi chơi cũ chưa có nhóm/sân: coi như thuộc nhóm đầu tiên, chưa rõ sân.
+    return {
+      ...(data as SessionBill),
+      id: d.id,
+      groupId: data.groupId || LEGACY_GROUP_ID,
+      groupName: data.groupName || (data.groupId ? '' : LEGACY_GROUP_NAME),
+      courtId: data.courtId ?? venueId ?? '',
+      courtName: data.courtName ?? venueName ?? '',
+      shuttlecockId: data.shuttlecockId ?? '',
+    };
+  });
 }
 
 export async function saveSession(bill: SessionBill): Promise<string> {
@@ -84,14 +238,4 @@ export async function saveSession(bill: SessionBill): Promise<string> {
 
 export async function deleteSession(id: string): Promise<void> {
   await deleteDoc(doc(getDb(), SESSIONS_COLLECTION, id));
-}
-
-/** Kiểm tra kết nối đọc Firestore (dùng cho chỉ báo trạng thái Cloud). */
-export async function checkConnection(): Promise<boolean> {
-  try {
-    await getDoc(doc(getDb(), ROSTER_COLLECTION, ROSTER_DOC_ID));
-    return true;
-  } catch {
-    return false;
-  }
 }

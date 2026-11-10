@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
 import { cn } from '@/libs/utils';
 import type { Gender, Player } from '@/types/badminton';
-import { Edit3, GlassWater, Plus, Users, X } from 'lucide-react';
+import { Edit3, GlassWater, Mars, Megaphone, Plus, UserPlus, Users, Venus, X } from 'lucide-react';
 import { useState } from 'react';
 import RoleBadge, { GenderTag } from '../RoleBadge';
 
@@ -63,8 +63,11 @@ export default function ParticipantSelector({
   }
   const totalCount = maleCount + femaleCount;
 
+  const trimmedPendingName = pendingName.trim();
+
   function handleAdd() {
-    onAddGuest(pendingName, pendingGender);
+    if (!trimmedPendingName) return;
+    onAddGuest(trimmedPendingName, pendingGender);
     setPendingName('');
   }
 
@@ -95,7 +98,7 @@ export default function ParticipantSelector({
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 pb-2">
           <div className="flex items-center gap-2">
             <Users className="size-4 text-[#059669]" />
-            <span className="text-[11px] font-bold uppercase tracking-wider text-gray-800">THÀNH VIÊN CỐ ĐỊNH CỦA CLB</span>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-gray-800">THÀNH VIÊN CỦA NHÓM</span>
             {onNavigateRoster && (
               <button
                 type="button"
@@ -103,7 +106,7 @@ export default function ParticipantSelector({
                 className="flex items-center gap-1 text-xs font-medium text-[#059669] hover:underline"
               >
                 <Edit3 className="size-3" />
-                Quản lý DS cố định
+                Quản lý thành viên
               </button>
             )}
           </div>
@@ -124,10 +127,10 @@ export default function ParticipantSelector({
           <p className="py-4 text-center text-xs text-gray-400">Đang tải danh sách thành viên...</p>
         ) : roster.length === 0 ? (
           <p className="py-4 text-center text-xs text-gray-400">
-            Chưa có thành viên cố định.{' '}
+            Nhóm này chưa có thành viên cố định.{' '}
             {onNavigateRoster && (
               <button type="button" onClick={onNavigateRoster} className="text-emerald-600 font-semibold underline">
-                Thêm ở tab Thành viên
+                Thêm ở Cài đặt › Nhóm của tôi
               </button>
             )}
           </p>
@@ -195,11 +198,12 @@ export default function ParticipantSelector({
                     )}
                     <span
                       className={cn(
-                        'shrink-0 rounded px-2 py-0.5 text-xs font-semibold',
+                        'flex shrink-0 items-center gap-1 rounded px-2 py-0.5 text-xs font-semibold',
                         isMale ? 'bg-[#e0f2fe] text-[#0284c7]' : 'bg-[#fce7f3] text-[#db2777]',
                       )}
                     >
-                      {isMale ? '♂ Nam' : '♀ Nữ'}
+                      {isMale ? <Mars className="size-3" /> : <Venus className="size-3" />}
+                      {isMale ? 'Nam' : 'Nữ'}
                     </span>
                   </div>
                 </label>
@@ -213,9 +217,9 @@ export default function ParticipantSelector({
       <div className="rounded-xl border border-[#fed7aa] bg-[#fffaf0] p-3.5 sm:p-4 flex flex-col gap-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="text-base">👥</span>
+            <UserPlus className="size-4 text-[#ea580c] shrink-0" />
             <span className="text-[11px] font-bold uppercase tracking-wider text-[#c2410c]">
-              6. TUYỂN NGƯỜI CHƠI VÃNG LAI HÔM NAY
+              TUYỂN NGƯỜI CHƠI VÃNG LAI HÔM NAY
             </span>
           </div>
           {guests.length > 0 ? (
@@ -234,7 +238,8 @@ export default function ParticipantSelector({
             value={pendingName}
             onChange={(e) => setPendingName(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
-            placeholder="Tên vãng lai (Bỏ trống = Vãng lai 1, 2...)"
+            placeholder="Nhập tên vãng lai"
+            aria-required="true"
             className="h-10 bg-white border-gray-200 text-sm font-medium flex-1 rounded-lg"
           />
           <div className="flex gap-2 shrink-0">
@@ -243,13 +248,15 @@ export default function ParticipantSelector({
               onChange={(e) => setPendingGender(e.target.value as Gender)}
               className="[&_select]:h-10 [&_select]:bg-white [&_select]:border-gray-200 [&_select]:text-xs [&_select]:font-semibold [&_select]:rounded-lg"
             >
-              <NativeSelectOption value="MALE">♂ Nam (Vãng lai)</NativeSelectOption>
-              <NativeSelectOption value="FEMALE">♀ Nữ (Vãng lai)</NativeSelectOption>
+              <NativeSelectOption value="MALE">Nam (Vãng lai)</NativeSelectOption>
+              <NativeSelectOption value="FEMALE">Nữ (Vãng lai)</NativeSelectOption>
             </NativeSelect>
             <button
               type="button"
               onClick={handleAdd}
-              className="flex h-10 items-center justify-center gap-1.5 rounded-lg bg-[#ea580c] hover:bg-[#c2410c] px-4 text-xs font-bold text-white shadow-sm transition-all"
+              disabled={!trimmedPendingName}
+              title={trimmedPendingName ? undefined : 'Nhập tên vãng lai trước khi thêm'}
+              className="flex h-10 items-center justify-center gap-1.5 rounded-lg bg-[#ea580c] hover:bg-[#c2410c] px-4 text-xs font-bold text-white shadow-sm transition-all disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-[#ea580c]"
             >
               <Plus className="size-4" />
               <span>Thêm vãng lai</span>
@@ -277,13 +284,23 @@ export default function ParticipantSelector({
                         : 'Khách bạn bè/người quen (Click để đổi thành Tuyển FB)'
                     }
                     className={cn(
-                      'shrink-0 rounded px-1.5 py-0.5 text-[10px] font-extrabold uppercase transition-all border cursor-pointer select-none',
+                      'flex shrink-0 items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-extrabold uppercase transition-all border cursor-pointer select-none',
                       guest.guestSource === 'FACEBOOK'
                         ? 'bg-[#1877f2] text-white border-[#166fe5] hover:bg-[#166fe5] shadow-2xs'
                         : 'bg-[#ffedd5] text-[#c2410c] border-[#fed7aa] hover:bg-[#fed7aa]',
                     )}
                   >
-                    {guest.guestSource === 'FACEBOOK' ? '🔵 Tuyển FB' : '👥 Bạn bè'}
+                    {guest.guestSource === 'FACEBOOK' ? (
+                      <>
+                        <Megaphone className="size-3" />
+                        Tuyển FB
+                      </>
+                    ) : (
+                      <>
+                        <Users className="size-3" />
+                        Bạn bè
+                      </>
+                    )}
                   </button>
                   <Input
                     value={guest.name}
@@ -312,11 +329,12 @@ export default function ParticipantSelector({
                   )}
                   <span
                     className={cn(
-                      'shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold',
+                      'flex shrink-0 items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] font-bold',
                       isMale ? 'bg-[#e0f2fe] text-[#0284c7]' : 'bg-[#fce7f3] text-[#db2777]',
                     )}
                   >
-                    {isMale ? '♂ Nam' : '♀ Nữ'}
+                    {isMale ? <Mars className="size-2.5" /> : <Venus className="size-2.5" />}
+                    {isMale ? 'Nam' : 'Nữ'}
                   </span>
                   <button
                     type="button"

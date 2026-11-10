@@ -2,24 +2,23 @@
 
 import { useBadminton } from '@/contexts/BadmintonContext';
 import { cn } from '@/libs/utils';
-import { Calculator, Cloud, CloudOff, History, LoaderCircle, Users } from 'lucide-react';
+import { Calculator, Cloud, CloudOff, History, LoaderCircle, Settings } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-export type TabKey = 'calculator' | 'roster' | 'history';
+export type TabKey = 'calculator' | 'history' | 'settings';
 export type CloudStatus = 'connecting' | 'online' | 'offline';
 
 const NAV_ITEMS = [
   { href: '/', label: 'Tính tiền buổi chơi', shortLabel: 'Tính tiền', icon: Calculator, key: 'calculator' },
-  { href: '/roster', label: 'Thành viên CLB', shortLabel: 'Thành viên', icon: Users, key: 'roster' },
   { href: '/history', label: 'Lịch sử các tuần', shortLabel: 'Lịch sử', icon: History, key: 'history' },
+  { href: '/settings', label: 'Cài đặt chung', shortLabel: 'Cài đặt', icon: Settings, key: 'settings' },
 ] as const;
 
 interface HeaderProps {
   cloudStatus?: CloudStatus;
   onRetryConnection?: () => void;
-  rosterCount?: number;
   historyCount?: number;
 }
 
@@ -29,13 +28,12 @@ export default function Header(props: HeaderProps) {
 
   const cloudStatus = props.cloudStatus ?? context.cloudStatus;
   const onRetryConnection = props.onRetryConnection ?? context.retryConnection;
-  const rosterCount = props.rosterCount ?? context.roster.length;
   const historyCount = props.historyCount ?? context.sessions.length;
 
   const tabCounts: Record<TabKey, number | undefined> = {
     calculator: undefined,
-    roster: rosterCount,
     history: historyCount,
+    settings: undefined,
   };
 
   return (

@@ -5,7 +5,6 @@ import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input';
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
 import type { Gender, MemberRole, Player } from '@/types/badminton';
-import { randomUUID } from 'crypto';
 import { Check, LoaderCircle, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { useState } from 'react';
 import { useConfirm } from '../../hooks/useConfirm';
@@ -14,6 +13,7 @@ import RoleBadge, { GenderTag, ROLE_LABELS } from '../RoleBadge';
 type Draft = { name: string; gender: Gender; role: MemberRole | '' };
 
 interface RosterManagerProps {
+  title?: string;
   roster: Player[];
   loading: boolean;
   cloudOnline: boolean;
@@ -21,7 +21,13 @@ interface RosterManagerProps {
   onSave: (members: Player[]) => Promise<void>;
 }
 
-export default function RosterManager({ roster, loading, cloudOnline, onSave }: RosterManagerProps) {
+export default function RosterManager({
+  title = 'Thành viên cố định',
+  roster,
+  loading,
+  cloudOnline,
+  onSave,
+}: RosterManagerProps) {
   const [newName, setNewName] = useState('');
   const [newGender, setNewGender] = useState<Gender>('MALE');
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -61,7 +67,7 @@ export default function RosterManager({ roster, loading, cloudOnline, onSave }: 
       setError(`"${name}" đã có trong danh sách.`);
       return;
     }
-    const member: Player = { id: randomUUID(), name, gender: newGender, type: 'REGULAR' };
+    const member: Player = { id: crypto.randomUUID(), name, gender: newGender, type: 'REGULAR' };
     if (await persist([...roster, member])) setNewName('');
   }
 
@@ -100,7 +106,7 @@ export default function RosterManager({ roster, loading, cloudOnline, onSave }: 
   async function handleDelete(member: Player) {
     const ok = await confirm({
       title: `Xóa "${member.name}"?`,
-      description: 'Thành viên sẽ bị xóa khỏi danh sách cố định. Lịch sử các buổi đã lưu không bị ảnh hưởng.',
+      description: 'Thành viên sẽ bị xóa khỏi danh sách cố định của nhóm. Lịch sử các buổi đã lưu không bị ảnh hưởng.',
       confirmLabel: 'Xóa',
       destructive: true,
     });
@@ -114,7 +120,7 @@ export default function RosterManager({ roster, loading, cloudOnline, onSave }: 
   return (
     <Card className="mx-auto w-full max-w-2xl">
       <CardHeader>
-        <CardTitle>Thành viên cố định CLB</CardTitle>
+        <CardTitle>{title}</CardTitle>
         <CardDescription>
           {roster.length} người · {maleCount} nam · {femaleCount} nữ
         </CardDescription>
@@ -247,3 +253,4 @@ function GenderSelect({ value, onChange }: { value: Gender; onChange: (g: Gender
     </NativeSelect>
   );
 }
+
