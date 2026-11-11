@@ -1,4 +1,4 @@
-import SettingsNav from '@/components/settings/SettingsNav';
+import SettingsNav from '@/components/features/settings/SettingsNav';
 import type { ReactNode } from 'react';
 
 export default function SettingsLayout({ children }: { children: ReactNode }) {
@@ -9,4 +9,3 @@ export default function SettingsLayout({ children }: { children: ReactNode }) {
     </div>
   );
 }
-

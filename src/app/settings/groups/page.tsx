@@ -1,30 +1,67 @@
 'use client';
 
-import RosterManager from '@/components/settings/RosterManager';
+import GroupForm from '@/components/features/settings/GroupForm';
+import RosterManager from '@/components/features/settings/RosterManager';
 import { Button } from '@/components/ui/button';
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useBadminton } from '@/contexts/BadmintonContext';
+import { useConnection } from '@/context/ConnectionContext';
 import { useConfirm } from '@/hooks/useConfirm';
 import { formatVND } from '@/libs/calculator';
-import { cn } from '@/libs/utils';
-import type { Group, Player } from '@/types/badminton';
+import { nowIso } from '@/libs/date-utils';
+import { CourtApi, GroupApi, SessionApi } from '@/libs/firebase';
+import type { GroupDraft } from '@/libs/form-schemas';
+import type { Court } from '@/types/court.types';
+import type { Group } from '@/types/group.types';
+import type { Player } from '@/types/player.types';
+import type { SessionBill } from '@/types/session.types';
+import { cn } from 'cn';
 import { ChevronDown, EyeOff, MapPin, Pencil, Plus, RotateCcw, Users, Venus } from 'lucide-react';
-import moment from 'moment';
 import Link from 'next/link';
-import { useState } from 'react';
-import GroupForm, { type GroupDraft } from '@components/settings/GroupForm';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { toast } from 'sonner';
+import { useBoolean } from 'usehooks-ts';
 
 const NEW_GROUP_DRAFT: GroupDraft = { name: '', femaleCap: 50000, defaultCourtId: '' };
 
 export default function GroupsManager() {
-  const { groups, activeGroups, courts, activeCourts, sessions, settingsLoading, cloudOnline, handleSaveGroup } = useBadminton();
-  const [creating, setCreating] = useState(false);
+  const { cloudOnline, setOnline, setOffline } = useConnection();
+  const [groups, setGroups] = useState<Group[]>([]);
+  const [courts, setCourts] = useState<Court[]>([]);
+  const [sessions, setSessions] = useState<SessionBill[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { value: creating, setTrue: openCreating, setFalse: closeCreating } = useBoolean(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [membersOpenId, setMembersOpenId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const { confirm, confirmDialog } = useConfirm();
+  const confirm = useConfirm();
 
-  const hiddenGroups = groups.filter((g) => g.deletedAt);
+  const loadData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const [groupList, courtList, sessionList] = await Promise.all([
+        GroupApi.fetchAll(),
+        CourtApi.fetchAll(),
+        SessionApi.fetchAll(),
+      ]);
+      setGroups(groupList);
+      setCourts(courtList);
+      setSessions(sessionList);
+      setOnline();
+    } catch (err) {
+      setError(`Không tải được danh sách nhóm: ${err instanceof Error ? err.message : String(err)}`);
+      setOffline();
+    } finally {
+      setLoading(false);
+    }
+  }, [setOnline, setOffline]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const activeGroups = useMemo(() => groups.filter((g) => !g.deletedAt), [groups]);
+  const hiddenGroups = useMemo(() => groups.filter((g) => g.deletedAt), [groups]);
+  const activeCourts = useMemo(() => courts.filter((c) => !c.deletedAt), [courts]);
   const disabled = !cloudOnline;
 
   function duplicateNameError(name: string, exceptId?: string): string | null {
@@ -36,27 +73,54 @@ export default function GroupsManager() {
   async function handleCreate(draft: GroupDraft): Promise<string | null> {
     const dupError = duplicateNameError(draft.name);
     if (dupError) return dupError;
-    const now = moment().toISOString();
-    const group: Group = { id: crypto.randomUUID(), ...draft, members: [], createdAt: now, updatedAt: now, deletedAt: null };
-    await handleSaveGroup(group, `Đã tạo nhóm "${group.name}"`);
-    setCreating(false);
-    setMembersOpenId(group.id); // Mở luôn phần thành viên để thêm người
-    return null;
+    const now = nowIso();
+    const group: Group = {
+      id: crypto.randomUUID(),
+      ...draft,
+      members: [],
+      createdAt: now,
+      updatedAt: now,
+      deletedAt: null,
+    };
+    try {
+      await GroupApi.save(group);
+      setGroups((prev) => [...prev, group]);
+      closeCreating();
+      setMembersOpenId(group.id);
+      toast.success(`Đã tạo nhóm "${group.name}"`);
+      return null;
+    } catch (err) {
+      return `Lưu thất bại: ${err instanceof Error ? err.message : String(err)}`;
+    }
   }
 
   async function handleUpdate(group: Group, draft: GroupDraft): Promise<string | null> {
     const dupError = duplicateNameError(draft.name, group.id);
     if (dupError) return dupError;
-    await handleSaveGroup({ ...group, ...draft, updatedAt: moment().toISOString() }, `Đã cập nhật nhóm "${draft.name}"`);
-    setEditingId(null);
-    return null;
+    const updated: Group = { ...group, ...draft, updatedAt: nowIso() };
+    try {
+      await GroupApi.save(updated);
+      setGroups((prev) => prev.map((g) => (g.id === group.id ? updated : g)));
+      setEditingId(null);
+      toast.success(`Đã cập nhật nhóm "${draft.name}"`);
+      return null;
+    } catch (err) {
+      return `Lưu thất bại: ${err instanceof Error ? err.message : String(err)}`;
+    }
   }
 
-  async function handleSaveMembers(group: Group, members: Player[]) {
-    await handleSaveGroup({ ...group, members, updatedAt: moment().toISOString() }, 'Đã lưu danh sách thành viên');
+  async function handleSaveMembers(group: Group, members: Player[]): Promise<void> {
+    const updated: Group = { ...group, members, updatedAt: nowIso() };
+    try {
+      await GroupApi.save(updated);
+      setGroups((prev) => prev.map((g) => (g.id === group.id ? updated : g)));
+      toast.success('Đã lưu danh sách thành viên');
+    } catch (err) {
+      toast.error(`Lưu thành viên thất bại: ${err instanceof Error ? err.message : String(err)}`);
+    }
   }
 
-  async function handleHide(group: Group) {
+  async function handleHide(group: Group): Promise<void> {
     const ok = await confirm({
       title: `Ẩn nhóm "${group.name}"?`,
       description:
@@ -65,22 +129,35 @@ export default function GroupsManager() {
       destructive: true,
     });
     if (!ok) return;
-    const now = moment().toISOString();
-    await handleSaveGroup({ ...group, deletedAt: now, updatedAt: now }, `Đã ẩn nhóm "${group.name}"`);
-    if (membersOpenId === group.id) setMembersOpenId(null);
+    const updated: Group = { ...group, deletedAt: nowIso(), updatedAt: nowIso() };
+    try {
+      await GroupApi.save(updated);
+      setGroups((prev) => prev.map((g) => (g.id === group.id ? updated : g)));
+      if (membersOpenId === group.id) setMembersOpenId(null);
+      toast.success(`Đã ẩn nhóm "${group.name}"`);
+    } catch (err) {
+      toast.error(`Ẩn thất bại: ${err instanceof Error ? err.message : String(err)}`);
+    }
   }
 
-  async function handleRestore(group: Group) {
+  async function handleRestore(group: Group): Promise<void> {
     const dupError = duplicateNameError(group.name, group.id);
     if (dupError) {
       setError(`${dupError} Đổi tên nhóm đó trước khi khôi phục.`);
       return;
     }
     setError(null);
-    await handleSaveGroup({ ...group, deletedAt: null, updatedAt: moment().toISOString() }, `Đã khôi phục nhóm "${group.name}"`);
+    const updated: Group = { ...group, deletedAt: null, updatedAt: nowIso() };
+    try {
+      await GroupApi.save(updated);
+      setGroups((prev) => prev.map((g) => (g.id === group.id ? updated : g)));
+      toast.success(`Đã khôi phục nhóm "${group.name}"`);
+    } catch (err) {
+      toast.error(`Khôi phục thất bại: ${err instanceof Error ? err.message : String(err)}`);
+    }
   }
 
-  function courtName(id: string) {
+  function courtName(id: string): string | undefined {
     return courts.find((v) => v.id === id)?.name;
   }
 
@@ -94,7 +171,7 @@ export default function GroupsManager() {
           </CardDescription>
           {!creating && (
             <CardAction>
-              <Button size="sm" onClick={() => setCreating(true)} disabled={disabled}>
+              <Button size="sm" onClick={openCreating} disabled={disabled}>
                 <Plus /> Tạo nhóm
               </Button>
             </CardAction>
@@ -103,7 +180,7 @@ export default function GroupsManager() {
         <CardContent className="flex flex-col gap-3">
           {!cloudOnline && <p className="text-xs text-destructive">Chưa kết nối Cloud nên không thể chỉnh sửa.</p>}
           {error && <p className="text-xs text-destructive">{error}</p>}
-          {activeCourts.length === 0 && !settingsLoading && (
+          {activeCourts.length === 0 && !loading && (
             <p className="text-xs text-muted-foreground">
               Chưa có sân nào.{' '}
               <Link href="/settings/courts" className="font-semibold text-[#059669] underline">
@@ -120,11 +197,11 @@ export default function GroupsManager() {
                 submitLabel="Tạo nhóm"
                 disabled={disabled}
                 onSubmit={handleCreate}
-                onCancel={() => setCreating(false)}
+                onCancel={closeCreating}
               />
             </div>
           )}
-          {settingsLoading ? (
+          {loading ? (
             <p className="text-muted-foreground">Đang tải danh sách nhóm...</p>
           ) : activeGroups.length === 0 && !creating ? (
             <p className="text-muted-foreground">Chưa có nhóm nào. Bấm "Tạo nhóm" để bắt đầu.</p>
@@ -242,9 +319,6 @@ export default function GroupsManager() {
           </ul>
         </details>
       )}
-
-      {confirmDialog}
     </div>
   );
 }
-

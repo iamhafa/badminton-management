@@ -1,10 +1,8 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  /* config options here */
-  experimental: {
-    agentFeedback: true,
-  },
+  typedRoutes: true,
+  reactCompiler: true,
   cacheComponents: true,
   partialPrefetching: true,
   turbopack: {
@@ -14,6 +12,20 @@ const nextConfig: NextConfig = {
         as: '*.css',
       },
     },
+  },
+  redirects() {
+    return [
+      {
+        source: '/',
+        destination: '/calculator',
+        permanent: true,
+      },
+      {
+        source: '/settings',
+        destination: '/settings/groups',
+        permanent: false,
+      },
+    ];
   },
 };
 

@@ -1,5 +1,6 @@
 import { buildSessionTitle, formatDateVN } from './date-utils';
-import type { Player, PlayerBreakdown, SessionBill, SessionInput } from '@/types/badminton';
+import type { Player } from '@/types/player.types';
+import type { PlayerBreakdown, SessionBill, SessionInput } from '@/types/session.types';
 
 export const SHUTTLES_PER_TUBE = 12;
 

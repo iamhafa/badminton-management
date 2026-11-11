@@ -1,77 +1,102 @@
 'use client';
 
+import { CourtAddForm, CourtEditForm } from '@/components/features/settings/CourtForm';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { useBadminton } from '@/contexts/BadmintonContext';
+import { useConnection } from '@/context/ConnectionContext';
 import { useConfirm } from '@/hooks/useConfirm';
-import type { Court } from '@/types/badminton';
-import { Check, EyeOff, MapPin, Pencil, Plus, RotateCcw, X } from 'lucide-react';
-import moment from 'moment';
-import { useState } from 'react';
-
-type CourtDraft = { name: string; address: string };
-const EMPTY_DRAFT: CourtDraft = { name: '', address: '' };
+import { nowIso } from '@/libs/date-utils';
+import { CourtApi, GroupApi } from '@/libs/firebase';
+import type { CourtDraft } from '@/libs/form-schemas';
+import type { Court } from '@/types/court.types';
+import type { Group } from '@/types/group.types';
+import { EyeOff, MapPin, Pencil, RotateCcw } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { toast } from 'sonner';
 
 export default function CourtsManager() {
-  const { courts, activeCourts, groups, settingsLoading, cloudOnline, handleSaveCourt } = useBadminton();
-  const [newDraft, setNewDraft] = useState<CourtDraft>(EMPTY_DRAFT);
+  const { cloudOnline, setOnline, setOffline } = useConnection();
+  const [courts, setCourts] = useState<Court[]>([]);
+  const [groups, setGroups] = useState<Group[]>([]);
+  const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editDraft, setEditDraft] = useState<CourtDraft>(EMPTY_DRAFT);
   const [error, setError] = useState<string | null>(null);
-  const { confirm, confirmDialog } = useConfirm();
+  const confirm = useConfirm();
 
-  const hiddenCourts = courts.filter((v) => v.deletedAt);
+  const loadData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const [courtList, groupList] = await Promise.all([CourtApi.fetchAll(), GroupApi.fetchAll()]);
+      setCourts(courtList);
+      setGroups(groupList);
+      setOnline();
+    } catch (err) {
+      setError(`Không tải được danh sách sân: ${err instanceof Error ? err.message : String(err)}`);
+      setOffline();
+    } finally {
+      setLoading(false);
+    }
+  }, [setOnline, setOffline]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const activeCourts = useMemo(() => courts.filter((v) => !v.deletedAt), [courts]);
+  const hiddenCourts = useMemo(() => courts.filter((v) => v.deletedAt), [courts]);
   const disabled = !cloudOnline;
 
-  function findDuplicate(name: string, exceptId?: string) {
+  function findDuplicate(name: string, exceptId?: string): Court | undefined {
     const key = name.trim().toLowerCase();
     return activeCourts.find((v) => v.id !== exceptId && v.name.trim().toLowerCase() === key);
   }
 
-  function groupsUsing(courtId: string) {
+  function groupsUsing(courtId: string): Group[] {
     return groups.filter((g) => !g.deletedAt && g.defaultCourtId === courtId);
   }
 
-  async function handleAdd(e: React.FormEvent) {
-    e.preventDefault();
-    const name = newDraft.name.trim();
-    if (!name) return;
+  async function handleAdd(values: CourtDraft): Promise<string | null> {
+    const name = values.name.trim();
     if (findDuplicate(name)) {
-      setError(`Sân "${name}" đã có trong danh sách.`);
-      return;
+      return `Sân "${name}" đã có trong danh sách.`;
     }
-    setError(null);
-    const now = moment().toISOString();
-    await handleSaveCourt(
-      { id: crypto.randomUUID(), name, address: newDraft.address.trim(), createdAt: now, updatedAt: now, deletedAt: null },
-      `Đã thêm sân "${name}"`,
-    );
-    setNewDraft(EMPTY_DRAFT);
+    const now = nowIso();
+    const newCourt: Court = {
+      id: crypto.randomUUID(),
+      name,
+      address: values.address.trim(),
+      createdAt: now,
+      updatedAt: now,
+      deletedAt: null,
+    };
+    try {
+      await CourtApi.save(newCourt);
+      setCourts((prev) => [...prev, newCourt].sort((a, b) => a.name.localeCompare(b.name, 'vi')));
+      toast.success(`Đã thêm sân "${name}"`);
+      return null;
+    } catch (err) {
+      return `Lưu thất bại: ${err instanceof Error ? err.message : String(err)}`;
+    }
   }
 
-  function startEdit(court: Court) {
-    setEditingId(court.id);
-    setEditDraft({ name: court.name, address: court.address });
-    setError(null);
-  }
-
-  async function handleSaveEdit(court: Court) {
-    const name = editDraft.name.trim();
-    if (!name) return;
+  async function handleSaveEdit(court: Court, values: CourtDraft): Promise<string | null> {
+    const name = values.name.trim();
     if (findDuplicate(name, court.id)) {
-      setError(`Sân "${name}" đã có trong danh sách.`);
-      return;
+      return `Sân "${name}" đã có trong danh sách.`;
     }
-    setError(null);
-    await handleSaveCourt(
-      { ...court, name, address: editDraft.address.trim(), updatedAt: moment().toISOString() },
-      `Đã cập nhật sân "${name}"`,
-    );
-    setEditingId(null);
+    const updated: Court = { ...court, name, address: values.address.trim(), updatedAt: nowIso() };
+    try {
+      await CourtApi.save(updated);
+      setCourts((prev) => prev.map((v) => (v.id === court.id ? updated : v)).sort((a, b) => a.name.localeCompare(b.name, 'vi')));
+      setEditingId(null);
+      toast.success(`Đã cập nhật sân "${name}"`);
+      return null;
+    } catch (err) {
+      return `Lưu thất bại: ${err instanceof Error ? err.message : String(err)}`;
+    }
   }
 
-  async function handleHide(court: Court) {
+  async function handleHide(court: Court): Promise<void> {
     const using = groupsUsing(court.id);
     const ok = await confirm({
       title: `Ẩn sân "${court.name}"?`,
@@ -86,17 +111,30 @@ export default function CourtsManager() {
       destructive: true,
     });
     if (!ok) return;
-    const now = moment().toISOString();
-    await handleSaveCourt({ ...court, deletedAt: now, updatedAt: now }, `Đã ẩn sân "${court.name}"`);
+    const updated: Court = { ...court, deletedAt: nowIso(), updatedAt: nowIso() };
+    try {
+      await CourtApi.save(updated);
+      setCourts((prev) => prev.map((v) => (v.id === court.id ? updated : v)));
+      toast.success(`Đã ẩn sân "${court.name}"`);
+    } catch (err) {
+      toast.error(`Ẩn thất bại: ${err instanceof Error ? err.message : String(err)}`);
+    }
   }
 
-  async function handleRestore(court: Court) {
+  async function handleRestore(court: Court): Promise<void> {
     if (findDuplicate(court.name, court.id)) {
       setError(`Đã có sân khác tên "${court.name}". Đổi tên sân đó trước khi khôi phục.`);
       return;
     }
     setError(null);
-    await handleSaveCourt({ ...court, deletedAt: null, updatedAt: moment().toISOString() }, `Đã khôi phục sân "${court.name}"`);
+    const updated: Court = { ...court, deletedAt: null, updatedAt: nowIso() };
+    try {
+      await CourtApi.save(updated);
+      setCourts((prev) => prev.map((v) => (v.id === court.id ? updated : v)));
+      toast.success(`Đã khôi phục sân "${court.name}"`);
+    } catch (err) {
+      toast.error(`Khôi phục thất bại: ${err instanceof Error ? err.message : String(err)}`);
+    }
   }
 
   return (
@@ -107,30 +145,12 @@ export default function CourtsManager() {
       </CardHeader>
 
       <CardContent className="flex flex-col gap-4">
-        <form onSubmit={handleAdd} className="flex flex-col gap-2 sm:flex-row">
-          <Input
-            value={newDraft.name}
-            onChange={(e) => setNewDraft((d) => ({ ...d, name: e.target.value }))}
-            placeholder="Tên sân (VD: Sân Mỹ Đình)"
-            aria-label="Tên sân mới"
-            className="min-w-0 flex-1"
-          />
-          <Input
-            value={newDraft.address}
-            onChange={(e) => setNewDraft((d) => ({ ...d, address: e.target.value }))}
-            placeholder="Địa chỉ (không bắt buộc)"
-            aria-label="Địa chỉ sân mới"
-            className="min-w-0 flex-1"
-          />
-          <Button type="submit" disabled={disabled || !newDraft.name.trim()}>
-            <Plus /> Thêm sân
-          </Button>
-        </form>
+        <CourtAddForm disabled={disabled} onSubmit={handleAdd} />
 
         {!cloudOnline && <p className="text-xs text-destructive">Chưa kết nối Cloud nên không thể chỉnh sửa.</p>}
         {error && <p className="text-xs text-destructive">{error}</p>}
 
-        {settingsLoading ? (
+        {loading ? (
           <p className="text-muted-foreground">Đang tải danh sách sân...</p>
         ) : activeCourts.length === 0 ? (
           <p className="text-muted-foreground">Chưa có sân nào. Thêm sân đầu tiên ở ô phía trên.</p>
@@ -141,60 +161,32 @@ export default function CourtsManager() {
               return (
                 <li key={court.id} className="flex flex-wrap items-center gap-2 py-2 sm:flex-nowrap">
                   {editingId === court.id ? (
-                    <>
-                      <Input
-                        value={editDraft.name}
-                        autoFocus
-                        aria-label="Tên sân"
-                        onChange={(e) => setEditDraft((d) => ({ ...d, name: e.target.value }))}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') handleSaveEdit(court);
-                          if (e.key === 'Escape') setEditingId(null);
-                        }}
-                        className="min-w-0 flex-1"
-                      />
-                      <Input
-                        value={editDraft.address}
-                        aria-label="Địa chỉ sân"
-                        placeholder="Địa chỉ"
-                        onChange={(e) => setEditDraft((d) => ({ ...d, address: e.target.value }))}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') handleSaveEdit(court);
-                          if (e.key === 'Escape') setEditingId(null);
-                        }}
-                        className="min-w-0 flex-1"
-                      />
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        aria-label="Lưu"
-                        title="Lưu"
-                        onClick={() => handleSaveEdit(court)}
-                        disabled={disabled || !editDraft.name.trim()}
-                        className="text-primary"
-                      >
-                        <Check />
-                      </Button>
-                      <Button variant="ghost" size="icon" aria-label="Hủy" title="Hủy" onClick={() => setEditingId(null)}>
-                        <X />
-                      </Button>
-                    </>
+                    <CourtEditForm
+                      initial={{ name: court.name, address: court.address }}
+                      disabled={disabled}
+                      onSubmit={(draft) => handleSaveEdit(court, draft)}
+                      onCancel={() => setEditingId(null)}
+                    />
                   ) : (
                     <>
-                      <MapPin className="size-4 shrink-0 text-[#059669]" />
                       <div className="min-w-0 flex-1">
-                        <div className="truncate font-medium">{court.name}</div>
-                        <div className="truncate text-xs text-muted-foreground">
-                          {court.address || 'Chưa có địa chỉ'}
-                          {using.length > 0 && ` · Sân mặc định của ${using.map((g) => g.name).join(', ')}`}
-                        </div>
+                        <p className="truncate font-semibold">{court.name}</p>
+                        {court.address ? (
+                          <p className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <MapPin className="size-3 shrink-0" />
+                            <span className="truncate">{court.address}</span>
+                          </p>
+                        ) : null}
+                        {using.length > 0 && (
+                          <p className="text-xs text-muted-foreground">Sân mặc định của {using.map((g) => g.name).join(', ')}</p>
+                        )}
                       </div>
                       <Button
                         variant="ghost"
                         size="icon"
-                        aria-label="Sửa"
-                        title="Sửa"
-                        onClick={() => startEdit(court)}
+                        aria-label="Sửa sân"
+                        title="Sửa sân"
+                        onClick={() => setEditingId(court.id)}
                         disabled={disabled}
                         className="text-muted-foreground"
                       >
@@ -203,7 +195,7 @@ export default function CourtsManager() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        aria-label="Ẩn"
+                        aria-label="Ẩn sân"
                         title="Ẩn sân"
                         onClick={() => handleHide(court)}
                         disabled={disabled}
@@ -220,14 +212,17 @@ export default function CourtsManager() {
         )}
 
         {hiddenCourts.length > 0 && (
-          <details className="rounded-lg border border-dashed px-3 py-2">
+          <details className="rounded-lg border border-dashed bg-white px-3 py-2">
             <summary className="cursor-pointer text-xs font-semibold text-muted-foreground">
               Sân đã ẩn ({hiddenCourts.length})
             </summary>
             <ul className="mt-2 divide-y">
               {hiddenCourts.map((court) => (
                 <li key={court.id} className="flex items-center gap-2 py-1.5 text-sm text-muted-foreground">
-                  <span className="min-w-0 flex-1 truncate">{court.name}</span>
+                  <span className="min-w-0 flex-1 truncate">
+                    {court.name}
+                    {court.address ? ` · ${court.address}` : ''}
+                  </span>
                   <Button variant="outline" size="sm" onClick={() => handleRestore(court)} disabled={disabled}>
                     <RotateCcw /> Khôi phục
                   </Button>
@@ -237,8 +232,6 @@ export default function CourtsManager() {
           </details>
         )}
       </CardContent>
-      {confirmDialog}
     </Card>
   );
 }
-

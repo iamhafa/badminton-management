@@ -2,7 +2,11 @@
 
 import { calculateBill } from '@/libs/calculator';
 import { todayIso } from '@/libs/date-utils';
-import type { Gender, Group, Player, SessionBill, SessionInput, Shuttlecock, Court } from '@/types/badminton';
+import type { Court } from '@/types/court.types';
+import type { Group } from '@/types/group.types';
+import type { Gender, Player } from '@/types/player.types';
+import type { SessionBill, SessionInput } from '@/types/session.types';
+import type { Shuttlecock } from '@/types/shuttlecock.types';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 const DEFAULT_INPUT: Omit<SessionInput, 'isoDate'> = {
@@ -59,8 +63,9 @@ export function useCalculator(group: Group | undefined, courts: Court[], shuttle
     setInput((prev) => ({ ...prev, shuttlecockId: '' }));
   }
 
-  // Đặt ngày hôm nay ở client sau khi mount để tránh lỗi SSR prerender Date.now()
+  // Đặt ngày hôm nay ở client sau khi mount: với cacheComponents, dùng `new Date()` lúc prerender sẽ báo lỗi.
   useEffect(() => {
+    // oxlint-disable-next-line react/set-state-in-effect -- đồng bộ với đồng hồ hệ thống, chỉ chạy một lần sau khi mount
     setInput((prev) => (prev.isoDate ? prev : { ...prev, isoDate: todayIso() }));
   }, []);
 
@@ -132,18 +137,11 @@ export function useCalculator(group: Group | undefined, courts: Court[], shuttle
     return [...fromRoster, ...guestList];
   }, [roster, selectedIds, guests, noWaterIds]);
 
-  // Tự động gán người mua nước là Trưởng nhóm hoặc người chơi đầu tiên trong danh sách tham gia
-  useEffect(() => {
-    if (participants.length === 0) return;
-    const exists = participants.some((p) => p.id === input.waterPayerId);
-    if (!exists) {
-      const leader = participants.find((p) => p.role === 'LEADER');
-      const defaultPayer = leader || participants[0];
-      if (defaultPayer) {
-        setInput((prev) => ({ ...prev, waterPayerId: defaultPayer.id }));
-      }
-    }
-  }, [participants, input.waterPayerId]);
+  // Người mua nước: giữ lựa chọn nếu người đó còn trong danh sách, ngược lại mặc định là Trưởng nhóm
+  // hoặc người chơi đầu tiên. Tính ngay khi render nên không cần effect.
+  const defaultPayerId = (participants.find((p) => p.role === 'LEADER') ?? participants[0])?.id ?? '';
+  const waterPayerId = participants.some((p) => p.id === input.waterPayerId) ? input.waterPayerId : defaultPayerId;
+  const effectiveInput = useMemo<SessionInput>(() => ({ ...input, waterPayerId }), [input, waterPayerId]);
 
   const courtName = courts.find((v) => v.id === input.courtId)?.name ?? '';
   const groupName = group?.name ?? '';
@@ -152,14 +150,14 @@ export function useCalculator(group: Group | undefined, courts: Court[], shuttle
   const shuttleBrand = shuttlecocks.find((s) => s.id === input.shuttlecockId)?.name ?? '';
 
   const bill: SessionBill = useMemo(
-    () => calculateBill({ ...input, shuttleBrand }, participants, '', { groupName, courtName }),
-    [input, shuttleBrand, participants, groupName, courtName],
+    () => calculateBill({ ...effectiveInput, shuttleBrand }, participants, '', { groupName, courtName }),
+    [effectiveInput, shuttleBrand, participants, groupName, courtName],
   );
 
   const hasSelection = selectedIds.length > 0 || guests.length > 0;
 
   return {
-    input,
+    input: effectiveInput,
     setInput,
     roster,
     selectedIds,
