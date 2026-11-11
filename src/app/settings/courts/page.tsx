@@ -1,23 +1,23 @@
 'use client';
 
 import { CourtAddForm, CourtEditForm } from '@/components/features/settings/CourtForm';
+import type { CourtDraft } from '@/components/features/settings/schema/court.schema';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useConnection } from '@/context/ConnectionContext';
 import { useConfirm } from '@/hooks/useConfirm';
-import { nowIso } from '@/libs/date-utils';
 import { CourtApi, GroupApi } from '@/libs/firebase';
-import type { CourtDraft } from '@/libs/form-schemas';
-import type { Court } from '@/types/court.types';
-import type { Group } from '@/types/group.types';
+import type { TCourt } from '@/types/court.types';
+import type { TGroup } from '@/types/group.types';
+import { nowIso } from '@/utils/date';
 import { EyeOff, MapPin, Pencil, RotateCcw } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
 export default function CourtsManager() {
   const { cloudOnline, setOnline, setOffline } = useConnection();
-  const [courts, setCourts] = useState<Court[]>([]);
-  const [groups, setGroups] = useState<Group[]>([]);
+  const [courts, setCourts] = useState<TCourt[]>([]);
+  const [groups, setGroups] = useState<TGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -46,12 +46,12 @@ export default function CourtsManager() {
   const hiddenCourts = useMemo(() => courts.filter((v) => v.deletedAt), [courts]);
   const disabled = !cloudOnline;
 
-  function findDuplicate(name: string, exceptId?: string): Court | undefined {
+  function findDuplicate(name: string, exceptId?: string): TCourt | undefined {
     const key = name.trim().toLowerCase();
     return activeCourts.find((v) => v.id !== exceptId && v.name.trim().toLowerCase() === key);
   }
 
-  function groupsUsing(courtId: string): Group[] {
+  function groupsUsing(courtId: string): TGroup[] {
     return groups.filter((g) => !g.deletedAt && g.defaultCourtId === courtId);
   }
 
@@ -61,7 +61,7 @@ export default function CourtsManager() {
       return `Sân "${name}" đã có trong danh sách.`;
     }
     const now = nowIso();
-    const newCourt: Court = {
+    const newCourt: TCourt = {
       id: crypto.randomUUID(),
       name,
       address: values.address.trim(),
@@ -79,12 +79,12 @@ export default function CourtsManager() {
     }
   }
 
-  async function handleSaveEdit(court: Court, values: CourtDraft): Promise<string | null> {
+  async function handleSaveEdit(court: TCourt, values: CourtDraft): Promise<string | null> {
     const name = values.name.trim();
     if (findDuplicate(name, court.id)) {
       return `Sân "${name}" đã có trong danh sách.`;
     }
-    const updated: Court = { ...court, name, address: values.address.trim(), updatedAt: nowIso() };
+    const updated: TCourt = { ...court, name, address: values.address.trim(), updatedAt: nowIso() };
     try {
       await CourtApi.save(updated);
       setCourts((prev) => prev.map((v) => (v.id === court.id ? updated : v)).sort((a, b) => a.name.localeCompare(b.name, 'vi')));
@@ -96,7 +96,7 @@ export default function CourtsManager() {
     }
   }
 
-  async function handleHide(court: Court): Promise<void> {
+  async function handleHide(court: TCourt): Promise<void> {
     const using = groupsUsing(court.id);
     const ok = await confirm({
       title: `Ẩn sân "${court.name}"?`,
@@ -111,7 +111,7 @@ export default function CourtsManager() {
       destructive: true,
     });
     if (!ok) return;
-    const updated: Court = { ...court, deletedAt: nowIso(), updatedAt: nowIso() };
+    const updated: TCourt = { ...court, deletedAt: nowIso(), updatedAt: nowIso() };
     try {
       await CourtApi.save(updated);
       setCourts((prev) => prev.map((v) => (v.id === court.id ? updated : v)));
@@ -121,13 +121,13 @@ export default function CourtsManager() {
     }
   }
 
-  async function handleRestore(court: Court): Promise<void> {
+  async function handleRestore(court: TCourt): Promise<void> {
     if (findDuplicate(court.name, court.id)) {
       setError(`Đã có sân khác tên "${court.name}". Đổi tên sân đó trước khi khôi phục.`);
       return;
     }
     setError(null);
-    const updated: Court = { ...court, deletedAt: null, updatedAt: nowIso() };
+    const updated: TCourt = { ...court, deletedAt: null, updatedAt: nowIso() };
     try {
       await CourtApi.save(updated);
       setCourts((prev) => prev.map((v) => (v.id === court.id ? updated : v)));

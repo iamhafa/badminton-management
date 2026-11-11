@@ -4,14 +4,14 @@ import { MoneyInput } from '@/components/form/MoneyInput';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
-import { FEMALE_CAP_PRESETS, formatVND, SHUTTLES_PER_TUBE } from '@/libs/calculator';
-import { getWeekdayVN } from '@/libs/date-utils';
+import type { TCourt } from '@/types/court.types';
+import type { TGroup } from '@/types/group.types';
+import type { TPlayer } from '@/types/player.types';
+import type { TSessionInput } from '@/types/session.types';
+import type { TShuttlecock } from '@/types/shuttlecock.types';
+import { getWeekdayVN } from '@/utils/date';
+import { FEMALE_CAP_PRESETS, formatVND, SHUTTLES_PER_TUBE } from '@/utils/format';
 import { cn } from 'cn';
-import type { Court } from '@/types/court.types';
-import type { Group } from '@/types/group.types';
-import type { Player } from '@/types/player.types';
-import type { SessionInput } from '@/types/session.types';
-import type { Shuttlecock } from '@/types/shuttlecock.types';
 import { CalendarDays, Droplet, Feather, Grid2X2, MapPin, Minus, Plus, RotateCcw, UsersRound, Venus } from 'lucide-react';
 import Link from 'next/link';
 
@@ -21,7 +21,7 @@ const WATER_FEE_PRESETS = [0, 35000, 40000, 50000];
 // Giá trị mẫu khi bấm "Khôi phục mẫu ví dụ".
 // Giữ nguyên nhóm, sân, loại cầu và ngày chơi; mức trần nữ và giá ống lấy theo nhóm / loại cầu đang chọn.
 const DEFAULT_INPUT_VALUES: Omit<
-  SessionInput,
+  TSessionInput,
   'isoDate' | 'groupId' | 'courtId' | 'femaleCap' | 'shuttlecockId' | 'shuttleBrand' | 'tubePrice'
 > = {
   hoursPlayed: 2,
@@ -32,15 +32,15 @@ const DEFAULT_INPUT_VALUES: Omit<
 };
 
 interface SessionCostFormProps {
-  input: SessionInput;
-  onChange: (patch: Partial<SessionInput>) => void;
-  participants: Player[];
+  input: TSessionInput;
+  onChange: (patch: Partial<TSessionInput>) => void;
+  participants: TPlayer[];
   /** Các nhóm đang dùng (chưa ẩn). */
-  groups: Group[];
+  groups: TGroup[];
   /** Các sân đang dùng (chưa ẩn). */
-  courts: Court[];
+  courts: TCourt[];
   /** Các loại cầu đang dùng (chưa ẩn). */
-  shuttlecocks: Shuttlecock[];
+  shuttlecocks: TShuttlecock[];
   /** Đổi nhóm (trang cha có thể hỏi xác nhận trước khi xóa lựa chọn người chơi). */
   onGroupChange: (groupId: string) => void;
 }
@@ -98,7 +98,7 @@ export default function SessionCostForm({
         </button>
       </div>
 
-      {/* Row 0: Group + Court */}
+      {/* Row 0: TGroup + TCourt */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {/* Nhóm */}
         <div className="flex flex-col gap-1.5">
@@ -224,7 +224,7 @@ export default function SessionCostForm({
         </div>
       </div>
 
-      {/* Row 2: Court fee + Female cap */}
+      {/* Row 2: TCourt fee + Female cap */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {/* Tiền thuê sân */}
         <div className="flex flex-col gap-1.5">
@@ -326,6 +326,7 @@ export default function SessionCostForm({
               {shuttlecocks.map((s) => (
                 <NativeSelectOption key={s.id} value={s.id}>
                   {s.name}
+                  {s.isDefault ? ' (Mặc định)' : ''}
                 </NativeSelectOption>
               ))}
             </NativeSelect>

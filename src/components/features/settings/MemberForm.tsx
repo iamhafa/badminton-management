@@ -1,16 +1,16 @@
 'use client';
 
+import { ROLE_LABELS } from '@/components/common/RoleBadge';
 import { FieldError } from '@/components/form/FieldError';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
-import { memberFormSchema, type MemberDraft } from '@/libs/form-schemas';
+import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Check, Plus, X } from 'lucide-react';
-import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { useRef } from 'react';
 import { useForm, type UseFormRegister } from 'react-hook-form';
-import { ROLE_LABELS } from '@/components/common/RoleBadge';
+import { memberFormSchema, type MemberDraft } from './schema/member.schema';
 
 const EMPTY_MEMBER: MemberDraft = { name: '', gender: 'MALE', role: '' };
 

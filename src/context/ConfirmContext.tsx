@@ -86,4 +86,3 @@ export function useConfirm(): ConfirmFunction {
   }
   return ctx;
 }
-

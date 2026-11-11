@@ -56,7 +56,7 @@ export class FirebaseClient {
     if (!FirebaseClient.app) {
       const isNewApp = getApps().length === 0;
       FirebaseClient.app = isNewApp ? initializeApp(FirebaseClient.readConfig()) : getApp();
-      // Bỏ qua các field `undefined` (VD: Player.active) thay vì để Firestore báo lỗi.
+      // Bỏ qua các field `undefined` (VD: TPlayer.active) thay vì để Firestore báo lỗi.
       // Chỉ gọi được một lần cho mỗi app, trước khi có bất kỳ lệnh nào khác tới Firestore.
       if (isNewApp) initializeFirestore(FirebaseClient.app, { ignoreUndefinedProperties: true });
     }

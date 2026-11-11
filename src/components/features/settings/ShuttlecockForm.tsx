@@ -4,12 +4,12 @@ import { FieldError } from '@/components/form/FieldError';
 import { MoneyInput } from '@/components/form/MoneyInput';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { shuttlecockFormSchema, type ShuttlecockDraft } from '@/libs/form-schemas';
+import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Check, Plus, X } from 'lucide-react';
-import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { useRef } from 'react';
 import { Controller, useForm, type Control, type FieldErrors } from 'react-hook-form';
+import { shuttlecockFormSchema, type ShuttlecockDraft } from './schema/shuttlecock.schema';
 
 const EMPTY_SHUTTLECOCK: ShuttlecockDraft = { name: '', tubePrice: 0 };
 

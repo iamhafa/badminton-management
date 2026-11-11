@@ -1,23 +1,23 @@
 'use client';
 
+import RoleBadge, { GenderTag, ROLE_LABELS } from '@/components/common/RoleBadge';
+import { MemberAddForm, MemberEditForm } from '@/components/features/settings/MemberForm';
 import { Button } from '@/components/ui/button';
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { MemberAddForm, MemberEditForm } from '@/components/features/settings/MemberForm';
 import { useConfirm } from '@/hooks/useConfirm';
-import type { MemberDraft } from '@/libs/form-schemas';
-import type { Player } from '@/types/player.types';
+import type { TPlayer } from '@/types/player.types';
 import { LoaderCircle, Pencil, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { useBoolean } from 'usehooks-ts';
-import RoleBadge, { GenderTag, ROLE_LABELS } from '@/components/common/RoleBadge';
+import type { MemberDraft } from './schema/member.schema';
 
 interface RosterManagerProps {
   title?: string;
-  roster: Player[];
+  roster: TPlayer[];
   loading: boolean;
   cloudOnline: boolean;
   /** Lưu toàn bộ danh sách mới lên Firestore. */
-  onSave: (members: Player[]) => Promise<void>;
+  onSave: (members: TPlayer[]) => Promise<void>;
 }
 
 export default function RosterManager({
@@ -37,7 +37,7 @@ export default function RosterManager({
   const disabled = saving || !cloudOnline;
 
   /** Lưu danh sách mới. Trả về thông báo lỗi nếu thất bại, hoặc null nếu thành công. */
-  async function persist(next: Player[]): Promise<string | null> {
+  async function persist(next: TPlayer[]): Promise<string | null> {
     startSaving();
     try {
       await onSave(next);
@@ -57,11 +57,11 @@ export default function RosterManager({
   async function handleAdd(values: MemberDraft): Promise<string | null> {
     if (isDuplicate(values.name)) return `"${values.name}" đã có trong danh sách.`;
     setError(null);
-    const member: Player = { id: crypto.randomUUID(), name: values.name, gender: values.gender, type: 'REGULAR' };
+    const member: TPlayer = { id: crypto.randomUUID(), name: values.name, gender: values.gender, type: 'REGULAR' };
     return persist([...roster, member]);
   }
 
-  function startEdit(member: Player) {
+  function startEdit(member: TPlayer) {
     setEditingId(member.id);
     setError(null);
   }
@@ -90,7 +90,7 @@ export default function RosterManager({
     return message;
   }
 
-  async function handleDelete(member: Player) {
+  async function handleDelete(member: TPlayer) {
     const ok = await confirm({
       title: `Xóa "${member.name}"?`,
       description: 'Thành viên sẽ bị xóa khỏi danh sách cố định của nhóm. Lịch sử các buổi đã lưu không bị ảnh hưởng.',

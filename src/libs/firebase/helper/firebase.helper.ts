@@ -1,4 +1,4 @@
-import type { Player } from '@/types/player.types';
+import type { TPlayer } from '@/types/player.types';
 import type { QuerySnapshot } from 'firebase/firestore';
 import { describeParseError } from '../schema/common.schema';
 
@@ -23,7 +23,7 @@ export function parseDocs<T>(snap: QuerySnapshot, label: string, parse: (id: str
 }
 
 /** Chỉ giữ các field cần lưu của thành viên cố định. */
-export function cleanMembers(members: Player[]): Player[] {
+export function cleanMembers(members: TPlayer[]): TPlayer[] {
   return members.map(({ id, name, gender, role }) => ({
     id,
     name,

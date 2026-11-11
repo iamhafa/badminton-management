@@ -6,12 +6,12 @@ import SessionCostForm from '@/components/features/calculator/SessionCostForm';
 import { useConnection } from '@/context/ConnectionContext';
 import { useCalculator } from '@/hooks/useCalculator';
 import { useConfirm } from '@/hooks/useConfirm';
-import { nowIso } from '@/libs/date-utils';
 import { CourtApi, GroupApi, SessionApi, ShuttlecockApi } from '@/libs/firebase';
-import type { Court } from '@/types/court.types';
-import type { Group } from '@/types/group.types';
-import type { SessionBill } from '@/types/session.types';
-import type { Shuttlecock } from '@/types/shuttlecock.types';
+import type { TCourt } from '@/types/court.types';
+import type { TGroup } from '@/types/group.types';
+import type { TSessionBill } from '@/types/session.types';
+import type { TShuttlecock } from '@/types/shuttlecock.types';
+import { nowIso } from '@/utils/date';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
@@ -30,9 +30,9 @@ export default function CalculatorPage() {
   const { cloudOnline, setOnline, setOffline } = useConnection();
   const confirm = useConfirm();
 
-  const [groups, setGroups] = useState<Group[]>([]);
-  const [courts, setCourts] = useState<Court[]>([]);
-  const [shuttlecocks, setShuttlecocks] = useState<Shuttlecock[]>([]);
+  const [groups, setGroups] = useState<TGroup[]>([]);
+  const [courts, setCourts] = useState<TCourt[]>([]);
+  const [shuttlecocks, setShuttlecocks] = useState<TShuttlecock[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [preferredGroupId, selectGroup] = useLocalStorage<string>(SELECTED_GROUP_STORAGE_KEY, '', SELECTED_GROUP_STORAGE_OPTIONS);
@@ -103,9 +103,9 @@ export default function CalculatorPage() {
     selectGroup(groupId);
   }
 
-  async function handleSaveSession(draft: SessionBill): Promise<void> {
+  async function handleSaveSession(draft: TSessionBill): Promise<void> {
     const tempId = `local_${crypto.randomUUID()}`;
-    const newBill: SessionBill = { ...draft, id: tempId, createdAt: draft.createdAt || nowIso() };
+    const newBill: TSessionBill = { ...draft, id: tempId, createdAt: draft.createdAt || nowIso() };
     if (!cloudOnline) {
       toast.info('Chưa kết nối Cloud nên chưa lưu được lên Firebase.');
       return;

@@ -3,15 +3,15 @@
 import HistoryList from '@/components/features/history/HistoryList';
 import { useConnection } from '@/context/ConnectionContext';
 import { GroupApi, SessionApi } from '@/libs/firebase';
-import type { Group } from '@/types/group.types';
-import type { SessionBill } from '@/types/session.types';
+import type { TGroup } from '@/types/group.types';
+import type { TSessionBill } from '@/types/session.types';
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
 export default function HistoryPage() {
   const { cloudOnline, setOnline, setOffline } = useConnection();
-  const [sessions, setSessions] = useState<SessionBill[]>([]);
-  const [groups, setGroups] = useState<Group[]>([]);
+  const [sessions, setSessions] = useState<TSessionBill[]>([]);
+  const [groups, setGroups] = useState<TGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 

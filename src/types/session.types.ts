@@ -1,7 +1,7 @@
-import type { Player } from '@/types/player.types';
+import type { TPlayer } from '@/types/player.types';
 
 // Đầu vào form tính tiền
-export interface SessionInput {
+export type TSessionInput = {
   groupId: string; // Nhóm chơi buổi này
   courtId: string; // Sân chơi buổi này (bắt buộc khi lưu)
   isoDate: string; // YYYY-MM-DD
@@ -14,20 +14,20 @@ export interface SessionInput {
   waterFee: number; // Tiền nước lọc (VD: 40000)
   waterPayerId: string; // ID của người chơi ứng tiền mua nước
   femaleCap: number; // Mức trần ưu tiên nữ (VD: 50000)
-}
+};
 
 // Kết quả chi tiết từng người sau khi tính toán
-export interface PlayerBreakdown extends Player {
+export type TPlayerBreakdown = TPlayer & {
   courtAndShuttleShare: number; // Tiền sân + tiền cầu
   waterShare: number; // Tiền nước người này phải trả (0 nếu không uống nước)
   baseShare: number; // Số tiền gốc theo giới tính + tiền nước (chưa trừ tiền ứng)
   waterCredit: number; // Tiền nước đã ứng (nếu người này mua nước)
   rawNetPayable: number; // baseShare - waterCredit (chưa làm tròn)
   roundedPayable: number; // Số tiền cuối cùng sau khi làm tròn (<500 xuống, >=500 lên)
-}
+};
 
 // Toàn bộ kết quả của 1 buổi chơi (Dùng để hiển thị UI & Lưu lên Firestore)
-export interface SessionBill extends SessionInput {
+export type TSessionBill = TSessionInput & {
   id?: string;
   createdAt: string;
   groupName: string; // Tên nhóm tại thời điểm lưu (giữ nguyên khi nhóm bị đổi tên/ẩn)
@@ -43,5 +43,5 @@ export interface SessionBill extends SessionInput {
   totalCount: number;
   maleCount: number;
   femaleCount: number;
-  playerBreakdowns: PlayerBreakdown[];
-}
+  playerBreakdowns: TPlayerBreakdown[];
+};

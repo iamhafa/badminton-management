@@ -6,17 +6,17 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
-import { FEMALE_CAP_PRESETS } from '@/libs/calculator';
-import { groupFormSchema, type GroupDraft } from '@/libs/form-schemas';
-import type { Court } from '@/types/court.types';
+import type { TCourt } from '@/types/court.types';
+import { FEMALE_CAP_PRESETS } from '@/utils/format';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { cn } from 'cn';
 import { useId } from 'react';
 import { Controller, useForm } from 'react-hook-form';
+import { groupFormSchema, type GroupDraft } from './schema/group.schema';
 
 interface GroupFormProps {
   initial: GroupDraft;
-  courts: Court[];
+  courts: TCourt[];
   submitLabel: string;
   disabled?: boolean;
   /** Trả về thông báo lỗi để hiển thị (VD: trùng tên), hoặc null nếu lưu thành công. */

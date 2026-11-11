@@ -1,19 +1,19 @@
 'use client';
 
+import RoleBadge, { GenderTag } from '@/components/common/RoleBadge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
-import type { Gender, Player } from '@/types/player.types';
-import { Edit3, GlassWater, Mars, Megaphone, UserPlus, Users, Venus, X } from 'lucide-react';
-import RoleBadge, { GenderTag } from '@/components/common/RoleBadge';
-import GuestForm from './GuestForm';
+import type { Gender, TPlayer } from '@/types/player.types';
 import { cn } from 'cn';
+import { Edit3, GlassWater, Mars, Megaphone, UserPlus, Users, Venus, X } from 'lucide-react';
+import GuestForm from './GuestForm';
 
 export { GenderTag };
 
 const NO_IDS: string[] = [];
 
 interface ParticipantSelectorProps {
-  roster: Player[];
+  roster: TPlayer[];
   rosterLoading: boolean;
   selectedIds: string[];
   noWaterIds?: string[];
@@ -21,10 +21,10 @@ interface ParticipantSelectorProps {
   onToggleWater?: (id: string) => void;
   onSelectAll: () => void;
   onClearAll: () => void;
-  guests: Player[];
+  guests: TPlayer[];
   onAddGuest: (name: string, gender: Gender) => void;
   onToggleGuestSource?: (id: string) => void;
-  onUpdateGuest: (id: string, patch: Partial<Pick<Player, 'name' | 'gender' | 'guestSource'>>) => void;
+  onUpdateGuest: (id: string, patch: Partial<Pick<TPlayer, 'name' | 'gender' | 'guestSource'>>) => void;
   onRemoveGuest: (id: string) => void;
   onNavigateRoster?: () => void;
 }

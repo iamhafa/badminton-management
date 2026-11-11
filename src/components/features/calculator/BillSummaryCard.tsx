@@ -1,14 +1,14 @@
 'use client';
 
-import { describePayable, formatVND, sumRoundedPayable } from '@/libs/calculator';
+import RoleBadge from '@/components/common/RoleBadge';
+import type { TPlayerBreakdown, TSessionBill } from '@/types/session.types';
+import { describePayable, formatVND, sumRoundedPayable } from '@/utils/format';
 import { cn } from 'cn';
-import type { PlayerBreakdown, SessionBill } from '@/types/session.types';
 import { CalendarDays, Clock, LoaderCircle, MapPin, Save, UsersRound } from 'lucide-react';
 import { useBoolean } from 'usehooks-ts';
-import RoleBadge from '@/components/common/RoleBadge';
 
 interface BillSummaryCardProps {
-  bill: SessionBill;
+  bill: TSessionBill;
   onSave: () => Promise<void>;
   cloudOnline: boolean;
   /** Lý do chưa được lưu (VD: chưa chọn sân). Có giá trị thì nút Lưu bị khóa. */
@@ -148,7 +148,7 @@ export default function BillSummaryCard({ bill, onSave, cloudOnline, saveBlocked
           </div>
         )}
 
-        {/* Player Breakdown list */}
+        {/* TPlayer Breakdown list */}
         <div>
           {hasPlayers ? (
             <>
@@ -205,12 +205,12 @@ export default function BillSummaryCard({ bill, onSave, cloudOnline, saveBlocked
               {/* Rounding difference note */}
               {(() => {
                 // Trừ phần đã ứng trước (vd: người mua nước) vì khoản đó đã được trả, không cần thu lại
-                const advanced: number = bill.playerBreakdowns.reduce((sum, p: PlayerBreakdown) => sum + p.waterCredit, 0);
+                const advanced: number = bill.playerBreakdowns.reduce((sum, p: TPlayerBreakdown) => sum + p.waterCredit, 0);
                 const expected: number = bill.totalCost - advanced;
                 const diff: number = collected - expected;
                 if (diff === 0) return null;
 
-                const advancer: PlayerBreakdown | undefined = bill.playerBreakdowns.find((p) => p.waterCredit > 0);
+                const advancer: TPlayerBreakdown | undefined = bill.playerBreakdowns.find((p) => p.waterCredit > 0);
 
                 return (
                   <div className="mt-1 flex flex-col gap-0.5 text-[11px] leading-relaxed text-gray-400">

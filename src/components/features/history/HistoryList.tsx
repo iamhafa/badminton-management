@@ -1,24 +1,25 @@
 'use client';
 
+import RoleBadge, { GenderTag } from '@/components/common/RoleBadge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { buildMessengerText, describePayable, formatVND } from '@/libs/calculator';
-import { formatDateTimeVN } from '@/libs/date-utils';
-import type { Group } from '@/types/group.types';
-import type { SessionBill } from '@/types/session.types';
+import { useConfirm } from '@/hooks/useConfirm';
+import type { TGroup } from '@/types/group.types';
+import type { TSessionBill } from '@/types/session.types';
+import { formatDateTimeVN } from '@/utils/date';
+import { describePayable, formatVND } from '@/utils/format';
+import { buildMessengerText } from '@/utils/messenger';
+import { cn } from 'cn';
 import { Check, ChevronDown, Copy, LoaderCircle, MapPin, RotateCcw, Trash2, UsersRound } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { useBoolean, useCopyToClipboard, useTimeout } from 'usehooks-ts';
-import { useConfirm } from '@/hooks/useConfirm';
-import RoleBadge, { GenderTag } from '@/components/common/RoleBadge';
-import { cn } from 'cn';
 
 interface HistoryListProps {
-  sessions: SessionBill[];
+  sessions: TSessionBill[];
   /** Tất cả nhóm (gồm cả nhóm đã ẩn) để hiện tên và bộ lọc. */
-  groups: Group[];
+  groups: TGroup[];
   loading: boolean;
   error: string | null;
   cloudOnline: boolean;
@@ -36,7 +37,7 @@ export default function HistoryList({ sessions, groups, loading, error, cloudOnl
   const confirm = useConfirm();
 
   /** Tên nhóm lưu trong buổi chơi; nếu thiếu thì lấy tên hiện tại của nhóm. */
-  function groupNameOf(bill: SessionBill): string {
+  function groupNameOf(bill: TSessionBill): string {
     return bill.groupName || groups.find((g) => g.id === bill.groupId)?.name || 'Không rõ nhóm';
   }
 
@@ -53,7 +54,7 @@ export default function HistoryList({ sessions, groups, loading, error, cloudOnl
 
   const visibleSessions = groupFilter === ALL_GROUPS ? sessions : sessions.filter((s) => s.groupId === groupFilter);
 
-  async function handleDelete(bill: SessionBill) {
+  async function handleDelete(bill: TSessionBill) {
     if (!bill.id) return;
     const ok = await confirm({
       title: 'Xóa buổi chơi này?',
@@ -220,7 +221,7 @@ export default function HistoryList({ sessions, groups, loading, error, cloudOnl
 }
 
 /** Nút copy bill. Mỗi buổi chơi có trạng thái "Đã copy" riêng và tự trở về nhãn cũ sau `COPIED_LABEL_MS`. */
-function CopyBillButton({ bill, groupName }: { bill: SessionBill; groupName: string }) {
+function CopyBillButton({ bill, groupName }: { bill: TSessionBill; groupName: string }) {
   const [, copy] = useCopyToClipboard();
   const { value: copied, setTrue: markCopied, setFalse: resetCopied } = useBoolean(false);
   useTimeout(resetCopied, copied ? COPIED_LABEL_MS : null);

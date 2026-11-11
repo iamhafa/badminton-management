@@ -1,4 +1,4 @@
-import type { Group } from '@/types/group.types';
+import type { TGroup } from '@/types/group.types';
 import { z } from 'zod';
 import { text, timestamps, type RawDoc } from './common.schema';
 import { playerSchema } from './player.schema';
@@ -15,6 +15,6 @@ const groupSchema = z.object({
 });
 
 /** `groups/{id}`. */
-export function parseGroup(id: string, data: RawDoc): Group {
+export function parseGroup(id: string, data: RawDoc): TGroup {
   return { id, ...groupSchema.parse(data) };
 }

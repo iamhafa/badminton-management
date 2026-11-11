@@ -3,12 +3,12 @@
 import { FieldError } from '@/components/form/FieldError';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { courtFormSchema, type CourtDraft } from '@/libs/form-schemas';
+import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Check, Plus, X } from 'lucide-react';
-import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { useRef } from 'react';
 import { useForm } from 'react-hook-form';
+import { courtFormSchema, type CourtDraft } from './schema/court.schema';
 
 const EMPTY_COURT: CourtDraft = { name: '', address: '' };
 

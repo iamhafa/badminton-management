@@ -9,7 +9,7 @@ export type GuestSource = 'FRIEND' | 'FACEBOOK';
 export type MemberRole = 'LEADER' | 'VICE_LEADER';
 
 // Thành viên cố định hoặc vãng lai
-export interface Player {
+export type TPlayer = {
   id: string;
   name: string;
   gender: Gender;
@@ -18,4 +18,4 @@ export interface Player {
   role?: MemberRole; // Chỉ dành cho thành viên cố định
   active?: boolean; // Dùng cho thành viên cố định khi tick chọn đi đánh hôm đó
   drinksWater?: boolean; // Có uống nước lọc chung hay không (mặc định: true)
-}
+};

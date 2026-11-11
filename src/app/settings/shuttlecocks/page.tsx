@@ -1,22 +1,22 @@
 'use client';
 
+import type { ShuttlecockDraft } from '@/components/features/settings/schema/shuttlecock.schema';
 import { ShuttlecockAddForm, ShuttlecockEditForm } from '@/components/features/settings/ShuttlecockForm';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useConnection } from '@/context/ConnectionContext';
 import { useConfirm } from '@/hooks/useConfirm';
-import { formatVND, SHUTTLES_PER_TUBE } from '@/libs/calculator';
-import { nowIso } from '@/libs/date-utils';
 import { ShuttlecockApi } from '@/libs/firebase';
-import type { ShuttlecockDraft } from '@/libs/form-schemas';
-import type { Shuttlecock } from '@/types/shuttlecock.types';
-import { EyeOff, Feather, Pencil, RotateCcw } from 'lucide-react';
+import type { TShuttlecock } from '@/types/shuttlecock.types';
+import { nowIso } from '@/utils/date';
+import { formatVND, SHUTTLES_PER_TUBE } from '@/utils/format';
+import { EyeOff, Feather, Pencil, RotateCcw, Star } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
 export default function ShuttlecocksManager() {
   const { cloudOnline, setOnline, setOffline } = useConnection();
-  const [shuttlecocks, setShuttlecocks] = useState<Shuttlecock[]>([]);
+  const [shuttlecocks, setShuttlecocks] = useState<TShuttlecock[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -44,7 +44,7 @@ export default function ShuttlecocksManager() {
   const hiddenShuttlecocks = useMemo(() => shuttlecocks.filter((s) => s.deletedAt), [shuttlecocks]);
   const disabled = !cloudOnline;
 
-  function findDuplicate(name: string, exceptId?: string): Shuttlecock | undefined {
+  function findDuplicate(name: string, exceptId?: string): TShuttlecock | undefined {
     const key = name.trim().toLowerCase();
     return activeShuttlecocks.find((s) => s.id !== exceptId && s.name.trim().toLowerCase() === key);
   }
@@ -55,7 +55,7 @@ export default function ShuttlecocksManager() {
       return `Loại cầu "${name}" đã có trong danh sách.`;
     }
     const now = nowIso();
-    const newShuttlecock: Shuttlecock = {
+    const newShuttlecock: TShuttlecock = {
       id: crypto.randomUUID(),
       name,
       tubePrice: values.tubePrice,
@@ -73,12 +73,12 @@ export default function ShuttlecocksManager() {
     }
   }
 
-  async function handleSaveEdit(shuttlecock: Shuttlecock, values: ShuttlecockDraft): Promise<string | null> {
+  async function handleSaveEdit(shuttlecock: TShuttlecock, values: ShuttlecockDraft): Promise<string | null> {
     const name = values.name.trim();
     if (findDuplicate(name, shuttlecock.id)) {
       return `Loại cầu "${name}" đã có trong danh sách.`;
     }
-    const updated: Shuttlecock = { ...shuttlecock, name, tubePrice: values.tubePrice, updatedAt: nowIso() };
+    const updated: TShuttlecock = { ...shuttlecock, name, tubePrice: values.tubePrice, updatedAt: nowIso() };
     try {
       await ShuttlecockApi.save(updated);
       setShuttlecocks((prev) =>
@@ -92,7 +92,7 @@ export default function ShuttlecocksManager() {
     }
   }
 
-  async function handleHide(shuttlecock: Shuttlecock): Promise<void> {
+  async function handleHide(shuttlecock: TShuttlecock): Promise<void> {
     const ok = await confirm({
       title: `Ẩn loại cầu "${shuttlecock.name}"?`,
       description:
@@ -101,7 +101,7 @@ export default function ShuttlecocksManager() {
       destructive: true,
     });
     if (!ok) return;
-    const updated: Shuttlecock = { ...shuttlecock, deletedAt: nowIso(), updatedAt: nowIso() };
+    const updated: TShuttlecock = { ...shuttlecock, deletedAt: nowIso(), updatedAt: nowIso() };
     try {
       await ShuttlecockApi.save(updated);
       setShuttlecocks((prev) => prev.map((s) => (s.id === shuttlecock.id ? updated : s)));
@@ -111,13 +111,13 @@ export default function ShuttlecocksManager() {
     }
   }
 
-  async function handleRestore(shuttlecock: Shuttlecock): Promise<void> {
+  async function handleRestore(shuttlecock: TShuttlecock): Promise<void> {
     if (findDuplicate(shuttlecock.name, shuttlecock.id)) {
       setError(`Đã có loại cầu khác tên "${shuttlecock.name}". Đổi tên loại cầu đó trước khi khôi phục.`);
       return;
     }
     setError(null);
-    const updated: Shuttlecock = { ...shuttlecock, deletedAt: null, updatedAt: nowIso() };
+    const updated: TShuttlecock = { ...shuttlecock, deletedAt: null, updatedAt: nowIso() };
     try {
       await ShuttlecockApi.save(updated);
       setShuttlecocks((prev) => prev.map((s) => (s.id === shuttlecock.id ? updated : s)));
@@ -127,12 +127,31 @@ export default function ShuttlecocksManager() {
     }
   }
 
+  async function handleSetDefault(shuttlecock: TShuttlecock): Promise<void> {
+    if (shuttlecock.isDefault) return;
+    try {
+      await ShuttlecockApi.setDefault(shuttlecock.id);
+      setShuttlecocks((prev) =>
+        prev.map((s) => ({
+          ...s,
+          isDefault: s.id === shuttlecock.id,
+        })),
+      );
+      toast.success(`Đã đặt "${shuttlecock.name}" làm loại cầu mặc định`);
+    } catch (err) {
+      toast.error(`Đặt mặc định thất bại: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>Loại cầu lông</CardTitle>
-        <CardDescription>
-          Mỗi ống 12 quả. Giá ống ở đây là giá mặc định, khi tính tiền bạn vẫn có thể sửa giá cho từng buổi.
+        <CardDescription className="flex flex-col gap-0.5">
+          <span>Mỗi ống 12 quả. Giá ống ở đây là giá đề xuất, khi tính tiền vẫn có thể chỉnh sửa lại.</span>
+          <span className="text-xs text-amber-800">
+            ⭐ Loại cầu được đánh dấu mặc định sẽ luôn được tự động chọn sẵn khi vào màn hình tính tiền.
+          </span>
         </CardDescription>
       </CardHeader>
 
@@ -163,7 +182,14 @@ export default function ShuttlecocksManager() {
                   ) : (
                     <>
                       <div className="min-w-0 flex-1">
-                        <p className="truncate font-semibold">{shuttlecock.name}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="truncate font-semibold">{shuttlecock.name}</p>
+                          {shuttlecock.isDefault && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800 border border-amber-300">
+                              <Star className="size-3 fill-amber-500 text-amber-500" /> Mặc định
+                            </span>
+                          )}
+                        </div>
                         <p className="flex items-center gap-1 text-xs text-muted-foreground">
                           <Feather className="size-3 shrink-0" />
                           <span>
@@ -171,6 +197,19 @@ export default function ShuttlecocksManager() {
                           </span>
                         </p>
                       </div>
+                      {!shuttlecock.isDefault && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          aria-label="Đặt làm mặc định"
+                          title="Đặt làm loại cầu mặc định khi tính tiền"
+                          onClick={() => handleSetDefault(shuttlecock)}
+                          disabled={disabled}
+                          className="text-muted-foreground hover:text-amber-600"
+                        >
+                          <Star className="size-4" />
+                        </Button>
+                      )}
                       <Button
                         variant="ghost"
                         size="icon"

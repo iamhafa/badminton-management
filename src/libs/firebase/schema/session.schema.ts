@@ -1,4 +1,4 @@
-import type { SessionBill } from '@/types/session.types';
+import type { TSessionBill } from '@/types/session.types';
 import { z } from 'zod';
 import { amount, text, type RawDoc } from './common.schema';
 import { playerSchema } from './player.schema';
@@ -43,6 +43,6 @@ const sessionSchema = z.object({
 });
 
 /** `sessions/{id}`. */
-export function parseSession(id: string, data: RawDoc): SessionBill {
+export function parseSession(id: string, data: RawDoc): TSessionBill {
   return { id, ...sessionSchema.parse(data) };
 }

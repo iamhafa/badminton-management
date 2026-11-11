@@ -2,18 +2,18 @@
 
 import GroupForm from '@/components/features/settings/GroupForm';
 import RosterManager from '@/components/features/settings/RosterManager';
+import type { GroupDraft } from '@/components/features/settings/schema/group.schema';
 import { Button } from '@/components/ui/button';
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useConnection } from '@/context/ConnectionContext';
 import { useConfirm } from '@/hooks/useConfirm';
-import { formatVND } from '@/libs/calculator';
-import { nowIso } from '@/libs/date-utils';
 import { CourtApi, GroupApi, SessionApi } from '@/libs/firebase';
-import type { GroupDraft } from '@/libs/form-schemas';
-import type { Court } from '@/types/court.types';
-import type { Group } from '@/types/group.types';
-import type { Player } from '@/types/player.types';
-import type { SessionBill } from '@/types/session.types';
+import type { TCourt } from '@/types/court.types';
+import type { TGroup } from '@/types/group.types';
+import type { TPlayer } from '@/types/player.types';
+import type { TSessionBill } from '@/types/session.types';
+import { nowIso } from '@/utils/date';
+import { formatVND } from '@/utils/format';
 import { cn } from 'cn';
 import { ChevronDown, EyeOff, MapPin, Pencil, Plus, RotateCcw, Users, Venus } from 'lucide-react';
 import Link from 'next/link';
@@ -25,9 +25,9 @@ const NEW_GROUP_DRAFT: GroupDraft = { name: '', femaleCap: 50000, defaultCourtId
 
 export default function GroupsManager() {
   const { cloudOnline, setOnline, setOffline } = useConnection();
-  const [groups, setGroups] = useState<Group[]>([]);
-  const [courts, setCourts] = useState<Court[]>([]);
-  const [sessions, setSessions] = useState<SessionBill[]>([]);
+  const [groups, setGroups] = useState<TGroup[]>([]);
+  const [courts, setCourts] = useState<TCourt[]>([]);
+  const [sessions, setSessions] = useState<TSessionBill[]>([]);
   const [loading, setLoading] = useState(true);
   const { value: creating, setTrue: openCreating, setFalse: closeCreating } = useBoolean(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -74,7 +74,7 @@ export default function GroupsManager() {
     const dupError = duplicateNameError(draft.name);
     if (dupError) return dupError;
     const now = nowIso();
-    const group: Group = {
+    const group: TGroup = {
       id: crypto.randomUUID(),
       ...draft,
       members: [],
@@ -94,10 +94,10 @@ export default function GroupsManager() {
     }
   }
 
-  async function handleUpdate(group: Group, draft: GroupDraft): Promise<string | null> {
+  async function handleUpdate(group: TGroup, draft: GroupDraft): Promise<string | null> {
     const dupError = duplicateNameError(draft.name, group.id);
     if (dupError) return dupError;
-    const updated: Group = { ...group, ...draft, updatedAt: nowIso() };
+    const updated: TGroup = { ...group, ...draft, updatedAt: nowIso() };
     try {
       await GroupApi.save(updated);
       setGroups((prev) => prev.map((g) => (g.id === group.id ? updated : g)));
@@ -109,8 +109,8 @@ export default function GroupsManager() {
     }
   }
 
-  async function handleSaveMembers(group: Group, members: Player[]): Promise<void> {
-    const updated: Group = { ...group, members, updatedAt: nowIso() };
+  async function handleSaveMembers(group: TGroup, members: TPlayer[]): Promise<void> {
+    const updated: TGroup = { ...group, members, updatedAt: nowIso() };
     try {
       await GroupApi.save(updated);
       setGroups((prev) => prev.map((g) => (g.id === group.id ? updated : g)));
@@ -120,7 +120,7 @@ export default function GroupsManager() {
     }
   }
 
-  async function handleHide(group: Group): Promise<void> {
+  async function handleHide(group: TGroup): Promise<void> {
     const ok = await confirm({
       title: `Ẩn nhóm "${group.name}"?`,
       description:
@@ -129,7 +129,7 @@ export default function GroupsManager() {
       destructive: true,
     });
     if (!ok) return;
-    const updated: Group = { ...group, deletedAt: nowIso(), updatedAt: nowIso() };
+    const updated: TGroup = { ...group, deletedAt: nowIso(), updatedAt: nowIso() };
     try {
       await GroupApi.save(updated);
       setGroups((prev) => prev.map((g) => (g.id === group.id ? updated : g)));
@@ -140,14 +140,14 @@ export default function GroupsManager() {
     }
   }
 
-  async function handleRestore(group: Group): Promise<void> {
+  async function handleRestore(group: TGroup): Promise<void> {
     const dupError = duplicateNameError(group.name, group.id);
     if (dupError) {
       setError(`${dupError} Đổi tên nhóm đó trước khi khôi phục.`);
       return;
     }
     setError(null);
-    const updated: Group = { ...group, deletedAt: null, updatedAt: nowIso() };
+    const updated: TGroup = { ...group, deletedAt: null, updatedAt: nowIso() };
     try {
       await GroupApi.save(updated);
       setGroups((prev) => prev.map((g) => (g.id === group.id ? updated : g)));
