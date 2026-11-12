@@ -1,6 +1,6 @@
 'use client';
 
-export default function GlobalError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
+export default function GlobalError({ error, reset }: { error: Error & { digest?: string }; reset: VoidFunction }) {
   return (
     <html lang="vi">
       <body className="flex min-h-screen flex-col items-center justify-center p-4 font-sans antialiased">

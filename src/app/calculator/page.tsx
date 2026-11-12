@@ -1,22 +1,23 @@
 'use client';
 
+import LoadingState from '@/components/common/LoadingState';
 import BillSummaryCard from '@/components/features/calculator/BillSummaryCard';
+import { useCalculator } from '@/components/features/calculator/hooks/useCalculator';
 import ParticipantSelector from '@/components/features/calculator/ParticipantSelector';
 import SessionCostForm from '@/components/features/calculator/SessionCostForm';
-import { useConnectionStore } from '@/stores/connection.store';
+import { useQueryCourts } from '@/hooks/useQueryCourts';
+import { useQueryGroups } from '@/hooks/useQueryGroups';
+import { useMutateSaveSession } from '@/hooks/useQuerySessions';
+import { useQueryShuttlecocks } from '@/hooks/useQueryShuttlecocks';
 import { confirm } from '@/stores/confirm.store';
-import LoadingState from '@/components/common/LoadingState';
-import { useCourts } from '@/hooks/useQueryCourts';
-import { useGroups } from '@/hooks/useQueryGroups';
-import { useSaveSession } from '@/hooks/useQuerySessions';
-import { useShuttlecocks } from '@/hooks/useQueryShuttlecocks';
-import type { TSessionBill } from '@/types/session.types';
+import { useConnectionStore } from '@/stores/connection.store';
+import { TGroup } from '@/types/group.types';
+import type { TSessionBill, TSessionInput } from '@/types/session.types';
 import { nowIso } from '@/utils/date';
 import { useRouter } from 'next/navigation';
 import { useMemo } from 'react';
 import { toast } from 'sonner';
 import { useIsClient, useLocalStorage } from 'usehooks-ts';
-import { useCalculator } from '@/components/features/calculator/hooks/useCalculator';
 
 const SELECTED_GROUP_STORAGE_KEY = 'badminton:selectedGroupId';
 const SELECTED_GROUP_STORAGE_OPTIONS = {
@@ -26,28 +27,21 @@ const SELECTED_GROUP_STORAGE_OPTIONS = {
 };
 
 export default function CalculatorPage() {
-  const hydrated = useIsClient();
+  const hydrated: boolean = useIsClient();
   const router = useRouter();
-  const cloudOnline = useConnectionStore((s) => s.cloudStatus === 'online');
+  const cloudOnline: boolean = useConnectionStore((s) => s.cloudStatus === 'online');
 
-  const groupsQuery = useGroups();
-  const courtsQuery = useCourts();
-  const shuttlecocksQuery = useShuttlecocks();
-  const saveSession = useSaveSession();
-  const groups = groupsQuery.data;
-  const courts = courtsQuery.data;
-  const shuttlecocks = shuttlecocksQuery.data;
-  const loading = groupsQuery.isPending || courtsQuery.isPending || shuttlecocksQuery.isPending;
+  const { data: groups, isPending: loadingGroups } = useQueryGroups();
+  const { data: courts, isPending: loadingCourts } = useQueryCourts();
+  const { data: shuttlecocks, isPending: loadingShuttlecocks } = useQueryShuttlecocks();
+  const { mutateAsync: saveSession } = useMutateSaveSession();
+  const loading: boolean = loadingGroups || loadingCourts || loadingShuttlecocks;
 
   const [preferredGroupId, selectGroup] = useLocalStorage<string>(SELECTED_GROUP_STORAGE_KEY, '', SELECTED_GROUP_STORAGE_OPTIONS);
 
-  const activeGroups = useMemo(() => groups?.filter((g) => !g.deletedAt) ?? [], [groups]);
-  const activeCourts = useMemo(() => courts?.filter((v) => !v.deletedAt) ?? [], [courts]);
-  const activeShuttlecocks = useMemo(() => shuttlecocks?.filter((s) => !s.deletedAt) ?? [], [shuttlecocks]);
-
-  const selectedGroup = useMemo(
-    () => activeGroups.find((g) => g.id === preferredGroupId) ?? activeGroups[0],
-    [activeGroups, preferredGroupId],
+  const selectedGroup: TGroup = useMemo(
+    () => groups.find((g) => g.id === preferredGroupId) ?? groups[0],
+    [groups, preferredGroupId],
   );
 
   const {
@@ -68,12 +62,12 @@ export default function CalculatorPage() {
     updateGuest,
     removeGuest,
     bill,
-  } = useCalculator(selectedGroup, activeCourts, activeShuttlecocks);
+  } = useCalculator(selectedGroup, courts, shuttlecocks);
 
   async function handleGroupChange(groupId: string): Promise<void> {
     if (groupId === selectedGroup?.id) return;
     if (hasSelection) {
-      const nextName = activeGroups.find((g) => g.id === groupId)?.name ?? '';
+      const nextName = groups.find((g) => g.id === groupId)?.name ?? '';
       const ok = await confirm({
         title: `Chuyển sang nhóm "${nextName}"?`,
         description: 'Danh sách người chơi và vãng lai đã chọn của nhóm hiện tại sẽ bị xóa.',
@@ -92,7 +86,7 @@ export default function CalculatorPage() {
       return;
     }
     try {
-      await saveSession.mutateAsync(newBill);
+      await saveSession(newBill);
       toast.success('Đã lưu buổi chơi vào Lịch sử (Firebase)');
     } catch (err) {
       toast.error(`Không thể lưu lên Cloud: ${err instanceof Error ? err.message : String(err)}`);
@@ -116,11 +110,11 @@ export default function CalculatorPage() {
       <div className="flex flex-col gap-4">
         <SessionCostForm
           input={input}
-          onChange={(patch) => setInput((prev) => ({ ...prev, ...patch }))}
+          onChange={(patch) => setInput((prev: TSessionInput) => ({ ...prev, ...patch }))}
           participants={participants}
-          groups={activeGroups}
-          courts={activeCourts}
-          shuttlecocks={activeShuttlecocks}
+          groups={groups}
+          courts={courts}
+          shuttlecocks={shuttlecocks}
           onGroupChange={handleGroupChange}
         />
         <ParticipantSelector
@@ -137,7 +131,7 @@ export default function CalculatorPage() {
           onToggleGuestSource={toggleGuestSource}
           onUpdateGuest={updateGuest}
           onRemoveGuest={removeGuest}
-          onNavigateRoster={() => router.push('/settings/groups')}
+          onNavigateRoster={() => selectedGroup && router.push(`/settings/groups/${selectedGroup.id}`)}
         />
       </div>
       <div>

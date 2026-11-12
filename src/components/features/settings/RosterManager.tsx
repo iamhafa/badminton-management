@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { confirm } from '@/stores/confirm.store';
 import type { TPlayer } from '@/types/player.types';
+import { cn } from 'cn';
 import { LoaderCircle, Pencil, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { useBoolean } from 'usehooks-ts';
@@ -136,8 +137,21 @@ export default function RosterManager({
         ) : (
           <ul className="divide-y">
             {roster.map((member, index) => (
-              <li key={member.id} className="flex flex-wrap items-center gap-2 py-2 sm:flex-nowrap">
-                <span className="w-6 text-right text-xs text-muted-foreground">{index + 1}.</span>
+              <li
+                key={member.id}
+                className={cn(
+                  'flex gap-2 py-2',
+                  editingId === member.id ? 'items-start sm:items-center' : 'items-center flex-wrap sm:flex-nowrap',
+                )}
+              >
+                <span
+                  className={cn(
+                    'w-6 text-right text-xs text-muted-foreground shrink-0',
+                    editingId === member.id && 'pt-2 sm:pt-0',
+                  )}
+                >
+                  {index + 1}.
+                </span>
                 {editingId === member.id ? (
                   <MemberEditForm
                     initial={{ name: member.name, gender: member.gender, role: member.role ?? '' }}

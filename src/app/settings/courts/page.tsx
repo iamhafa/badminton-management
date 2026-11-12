@@ -1,55 +1,52 @@
 'use client';
 
+import LoadingState from '@/components/common/LoadingState';
 import { CourtAddForm, CourtEditForm } from '@/components/features/settings/CourtForm';
 import type { CourtDraft } from '@/components/features/settings/schemas/court.schema';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ConnectionState, useConnectionStore } from '@/stores/connection.store';
+import { useMutateSaveCourt, useQueryCourts } from '@/hooks/useQueryCourts';
+import { useQueryGroups } from '@/hooks/useQueryGroups';
 import { confirm } from '@/stores/confirm.store';
-import LoadingState from '@/components/common/LoadingState';
-import { useCourts, useSaveCourt } from '@/hooks/useQueryCourts';
-import { useGroups } from '@/hooks/useQueryGroups';
+import { ConnectionState, useConnectionStore } from '@/stores/connection.store';
 import type { TCourt } from '@/types/court.types';
 import type { TGroup } from '@/types/group.types';
 import { nowIso } from '@/utils/date';
-import { EyeOff, MapPin, Pencil, RotateCcw } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { EyeOff, MapPin, Pencil } from 'lucide-react';
+import { useState } from 'react';
 import { toast } from 'sonner';
 
 export default function CourtsManager() {
   const cloudIsOnline: boolean = useConnectionStore((state: ConnectionState) => state.cloudStatus === 'online');
-  const courtsQuery = useCourts();
-  const groupsQuery = useGroups();
-  const saveCourt = useSaveCourt();
-  const courts = courtsQuery.data;
-  const groups = groupsQuery.data;
-  const loading = courtsQuery.isPending || groupsQuery.isPending;
-  const loadError = courtsQuery.error ?? groupsQuery.error;
+  const { data: courts, isPending: loadingCourts, error: courtsError } = useQueryCourts();
+  const { data: groups, isPending: loadingGroups, error: groupsError } = useQueryGroups();
+  const { mutateAsync: saveCourt, isPending: savingCourt } = useMutateSaveCourt();
+
+  const loading: boolean = loadingCourts || loadingGroups || savingCourt;
+  const loadError = courtsError ?? groupsError;
   const loadErrorMessage = loadError
     ? `Không tải được danh sách sân: ${loadError instanceof Error ? loadError.message : String(loadError)}`
     : null;
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  const activeCourts = useMemo(() => courts?.filter((v) => !v.deletedAt) ?? [], [courts]);
-  const hiddenCourts = useMemo(() => courts?.filter((v) => v.deletedAt) ?? [], [courts]);
-  const disabled = !cloudIsOnline;
+  const disabled: boolean = !cloudIsOnline;
 
   function findDuplicate(name: string, exceptId?: string): TCourt | undefined {
-    const key = name.trim().toLowerCase();
-    return activeCourts.find((v) => v.id !== exceptId && v.name.trim().toLowerCase() === key);
+    const key: string = name.trim().toLowerCase();
+    return courts.find((v) => v.id !== exceptId && v.name.trim().toLowerCase() === key);
   }
 
   function groupsUsing(courtId: string): TGroup[] {
-    return (groups ?? []).filter((g) => !g.deletedAt && g.defaultCourtId === courtId);
+    return groups.filter((g) => !g.deletedAt && g.defaultCourtId === courtId);
   }
 
   async function handleAdd(values: CourtDraft): Promise<string | null> {
-    const name = values.name.trim();
+    const name: string = values.name.trim();
+
     if (findDuplicate(name)) {
       return `Sân "${name}" đã có trong danh sách.`;
     }
-    const now = nowIso();
+
+    const now: string = nowIso();
     const newCourt: TCourt = {
       id: crypto.randomUUID(),
       name,
@@ -59,7 +56,7 @@ export default function CourtsManager() {
       deletedAt: null,
     };
     try {
-      await saveCourt.mutateAsync(newCourt);
+      await saveCourt(newCourt);
       toast.success(`Đã thêm sân "${name}"`);
       return null;
     } catch (err) {
@@ -68,13 +65,15 @@ export default function CourtsManager() {
   }
 
   async function handleSaveEdit(court: TCourt, values: CourtDraft): Promise<string | null> {
-    const name = values.name.trim();
+    const name: string = values.name.trim();
+
     if (findDuplicate(name, court.id)) {
       return `Sân "${name}" đã có trong danh sách.`;
     }
+
     const updated: TCourt = { ...court, name, address: values.address.trim(), updatedAt: nowIso() };
     try {
-      await saveCourt.mutateAsync(updated);
+      await saveCourt(updated);
       setEditingId(null);
       toast.success(`Đã cập nhật sân "${name}"`);
       return null;
@@ -84,8 +83,8 @@ export default function CourtsManager() {
   }
 
   async function handleHide(court: TCourt): Promise<void> {
-    const using = groupsUsing(court.id);
-    const ok = await confirm({
+    const using: TGroup[] = groupsUsing(court.id);
+    const ok: boolean = await confirm({
       title: `Ẩn sân "${court.name}"?`,
       description: (
         <>
@@ -100,25 +99,10 @@ export default function CourtsManager() {
     if (!ok) return;
     const updated: TCourt = { ...court, deletedAt: nowIso(), updatedAt: nowIso() };
     try {
-      await saveCourt.mutateAsync(updated);
+      await saveCourt(updated);
       toast.success(`Đã ẩn sân "${court.name}"`);
     } catch (err) {
       toast.error(`Ẩn thất bại: ${err instanceof Error ? err.message : String(err)}`);
-    }
-  }
-
-  async function handleRestore(court: TCourt): Promise<void> {
-    if (findDuplicate(court.name, court.id)) {
-      setError(`Đã có sân khác tên "${court.name}". Đổi tên sân đó trước khi khôi phục.`);
-      return;
-    }
-    setError(null);
-    const updated: TCourt = { ...court, deletedAt: null, updatedAt: nowIso() };
-    try {
-      await saveCourt.mutateAsync(updated);
-      toast.success(`Đã khôi phục sân "${court.name}"`);
-    } catch (err) {
-      toast.error(`Khôi phục thất bại: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
 
@@ -133,15 +117,15 @@ export default function CourtsManager() {
         <CourtAddForm disabled={disabled} onSubmit={handleAdd} />
 
         {!cloudIsOnline && <p className="text-xs text-destructive">Chưa kết nối Cloud nên không thể chỉnh sửa.</p>}
-        {(error ?? loadErrorMessage) && <p className="text-xs text-destructive">{error ?? loadErrorMessage}</p>}
+        {loadErrorMessage && <p className="text-xs text-destructive">{loadErrorMessage}</p>}
 
         {loading ? (
           <LoadingState />
-        ) : activeCourts.length === 0 ? (
+        ) : courts.length === 0 ? (
           <p className="text-muted-foreground">Chưa có sân nào. Thêm sân đầu tiên ở ô phía trên.</p>
         ) : (
           <ul className="divide-y">
-            {activeCourts.map((court) => {
+            {courts.map((court) => {
               const using = groupsUsing(court.id);
               return (
                 <li key={court.id} className="flex flex-wrap items-center gap-2 py-2 sm:flex-nowrap">
@@ -156,12 +140,12 @@ export default function CourtsManager() {
                     <>
                       <div className="min-w-0 flex-1">
                         <p className="truncate font-semibold">{court.name}</p>
-                        {court.address ? (
+                        {court.address ?? (
                           <p className="flex items-center gap-1 text-xs text-muted-foreground">
                             <MapPin className="size-3 shrink-0" />
                             <span className="truncate">{court.address}</span>
                           </p>
-                        ) : null}
+                        )}
                         {using.length > 0 && (
                           <p className="text-xs text-muted-foreground">Sân mặc định của {using.map((g) => g.name).join(', ')}</p>
                         )}
@@ -194,27 +178,6 @@ export default function CourtsManager() {
               );
             })}
           </ul>
-        )}
-
-        {hiddenCourts.length > 0 && (
-          <details className="rounded-lg border border-dashed bg-white px-3 py-2">
-            <summary className="cursor-pointer text-xs font-semibold text-muted-foreground">
-              Sân đã ẩn ({hiddenCourts.length})
-            </summary>
-            <ul className="mt-2 divide-y">
-              {hiddenCourts.map((court) => (
-                <li key={court.id} className="flex items-center gap-2 py-1.5 text-sm text-muted-foreground">
-                  <span className="min-w-0 flex-1 truncate">
-                    {court.name}
-                    {court.address ? ` · ${court.address}` : ''}
-                  </span>
-                  <Button variant="outline" size="sm" onClick={() => handleRestore(court)} disabled={disabled}>
-                    <RotateCcw /> Khôi phục
-                  </Button>
-                </li>
-              ))}
-            </ul>
-          </details>
         )}
       </CardContent>
     </Card>

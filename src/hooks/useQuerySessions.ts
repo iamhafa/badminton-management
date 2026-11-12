@@ -2,15 +2,17 @@ import { SessionApi } from '@/libs/firebase';
 import type { TSessionBill } from '@/types/session.types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-export function useSessions() {
-  return useQuery({
+export function useQuerySessions() {
+  return useQuery<TSessionBill[], Error, TSessionBill[]>({
     queryKey: ['sessions'],
     queryFn: () => SessionApi.fetchAll(),
+    initialData: [],
+    initialDataUpdatedAt: 0,
   });
 }
 
 /** Lưu 1 buổi chơi mới. Firestore tự sinh id nên tải lại danh sách lịch sử lần sau khi mở. */
-export function useSaveSession() {
+export function useMutateSaveSession() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (bill: TSessionBill) => SessionApi.save(bill),
@@ -19,7 +21,7 @@ export function useSaveSession() {
 }
 
 /** Xóa 1 buổi chơi. Bỏ khỏi danh sách ngay (optimistic), lỗi thì trả lại như cũ. */
-export function useDeleteSession() {
+export function useMutateDeleteSession() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => SessionApi.delete(id),

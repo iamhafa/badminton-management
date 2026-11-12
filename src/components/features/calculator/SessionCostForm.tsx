@@ -270,7 +270,10 @@ export default function SessionCostForm({
           <div className="flex flex-wrap items-center justify-between gap-1.5 mt-0.5">
             <span className="text-[10px] sm:text-[11px] text-gray-400 italic">
               Lấy từ thiết lập nhóm.{' '}
-              <Link href="/settings/groups" className="font-semibold text-[#059669] underline not-italic">
+              <Link
+                href={input.groupId ? `/settings/groups/${input.groupId}?edit=1` : '/settings/groups'}
+                className="font-semibold text-[#059669] underline not-italic"
+              >
                 Đổi trong Cài đặt
               </Link>
             </span>

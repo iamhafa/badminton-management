@@ -91,34 +91,47 @@ export function MemberEditForm({
   });
 
   return (
-    <form onSubmit={submit} noValidate className="flex min-w-0 flex-1 flex-wrap items-center gap-2 sm:flex-nowrap">
+    <form onSubmit={submit} noValidate className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center">
       <Input
         {...register('name')}
         autoFocus
         aria-label="Tên thành viên"
         aria-invalid={!!errors.name}
+        placeholder="Tên thành viên"
         className="min-w-0 flex-1"
       />
-      <GenderSelect register={register} />
-      <NativeSelect {...register('role')} aria-label="Vai trò">
-        <NativeSelectOption value="">Thành viên</NativeSelectOption>
-        <NativeSelectOption value="LEADER">{ROLE_LABELS.LEADER}</NativeSelectOption>
-        <NativeSelectOption value="VICE_LEADER">{ROLE_LABELS.VICE_LEADER}</NativeSelectOption>
-      </NativeSelect>
-      <Button
-        type="submit"
-        variant="ghost"
-        size="icon"
-        aria-label="Lưu"
-        title="Lưu"
-        disabled={disabled || !isValid || isSubmitting}
-        className="text-primary"
-      >
-        <Check />
-      </Button>
-      <Button type="button" variant="ghost" size="icon" aria-label="Hủy" title="Hủy" onClick={onCancel}>
-        <X />
-      </Button>
+      <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+        <GenderSelect register={register} />
+        <NativeSelect {...register('role')} aria-label="Vai trò" className="flex-1 sm:flex-none">
+          <NativeSelectOption value="">Thành viên</NativeSelectOption>
+          <NativeSelectOption value="LEADER">{ROLE_LABELS.LEADER}</NativeSelectOption>
+          <NativeSelectOption value="VICE_LEADER">{ROLE_LABELS.VICE_LEADER}</NativeSelectOption>
+        </NativeSelect>
+        <div className="flex items-center gap-1 shrink-0 ml-auto sm:ml-0">
+          <Button
+            type="submit"
+            variant="ghost"
+            size="icon"
+            aria-label="Lưu"
+            title="Lưu"
+            disabled={disabled || !isValid || isSubmitting}
+            className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 size-8"
+          >
+            <Check className="size-4" />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            aria-label="Hủy"
+            title="Hủy"
+            onClick={onCancel}
+            className="text-muted-foreground hover:text-foreground size-8"
+          >
+            <X className="size-4" />
+          </Button>
+        </div>
+      </div>
       <FieldError message={errors.name?.message} className="basis-full text-xs text-destructive" />
     </form>
   );

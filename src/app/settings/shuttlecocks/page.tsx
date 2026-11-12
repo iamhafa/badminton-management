@@ -1,38 +1,35 @@
 'use client';
 
+import LoadingState from '@/components/common/LoadingState';
 import type { ShuttlecockDraft } from '@/components/features/settings/schemas/shuttlecock.schema';
 import { ShuttlecockAddForm, ShuttlecockEditForm } from '@/components/features/settings/ShuttlecockForm';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import LoadingState from '@/components/common/LoadingState';
-import { useSaveShuttlecock, useSetDefaultShuttlecock, useShuttlecocks } from '@/hooks/useQueryShuttlecocks';
-import { ConnectionState, useConnectionStore } from '@/stores/connection.store';
+import { useMutateSetDefaultShuttlecock, useMutateShuttlecock, useQueryShuttlecocks } from '@/hooks/useQueryShuttlecocks';
 import { confirm } from '@/stores/confirm.store';
+import { ConnectionState, useConnectionStore } from '@/stores/connection.store';
 import type { TShuttlecock } from '@/types/shuttlecock.types';
 import { nowIso } from '@/utils/date';
 import { formatVND, SHUTTLES_PER_TUBE } from '@/utils/format';
-import { EyeOff, Feather, Pencil, RotateCcw, Star } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { EyeOff, Feather, Pencil, Star } from 'lucide-react';
+import { useState } from 'react';
 import { toast } from 'sonner';
 
 export default function ShuttlecocksManager() {
   const cloudOnline: boolean = useConnectionStore((state: ConnectionState) => state.cloudStatus === 'online');
-  const { data: shuttlecocks, isPending: loading, error: loadError } = useShuttlecocks();
-  const saveShuttlecock = useSaveShuttlecock();
-  const setDefaultShuttlecock = useSetDefaultShuttlecock();
+  const { mutateAsync: saveShuttlecock } = useMutateShuttlecock();
+  const { mutateAsync: setDefaultShuttlecock } = useMutateSetDefaultShuttlecock();
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const { data: shuttlecocks, isPending: loading, error: loadError } = useQueryShuttlecocks();
 
   const loadErrorMessage = loadError
     ? `Không tải được danh sách loại cầu: ${loadError instanceof Error ? loadError.message : String(loadError)}`
     : null;
-  const activeShuttlecocks = useMemo(() => shuttlecocks?.filter((s) => !s.deletedAt) ?? [], [shuttlecocks]);
-  const hiddenShuttlecocks = useMemo(() => shuttlecocks?.filter((s) => s.deletedAt) ?? [], [shuttlecocks]);
   const disabled = !cloudOnline;
 
   function findDuplicate(name: string, exceptId?: string): TShuttlecock | undefined {
     const key = name.trim().toLowerCase();
-    return activeShuttlecocks.find((s) => s.id !== exceptId && s.name.trim().toLowerCase() === key);
+    return shuttlecocks.find((s) => s.id !== exceptId && s.name.trim().toLowerCase() === key);
   }
 
   async function handleAdd(values: ShuttlecockDraft): Promise<string | null> {
@@ -50,7 +47,7 @@ export default function ShuttlecocksManager() {
       deletedAt: null,
     };
     try {
-      await saveShuttlecock.mutateAsync(newShuttlecock);
+      await saveShuttlecock(newShuttlecock);
       toast.success(`Đã thêm loại cầu "${name}"`);
       return null;
     } catch (err) {
@@ -65,7 +62,7 @@ export default function ShuttlecocksManager() {
     }
     const updated: TShuttlecock = { ...shuttlecock, name, tubePrice: values.tubePrice, updatedAt: nowIso() };
     try {
-      await saveShuttlecock.mutateAsync(updated);
+      await saveShuttlecock(updated);
       setEditingId(null);
       toast.success(`Đã cập nhật loại cầu "${name}"`);
       return null;
@@ -85,32 +82,17 @@ export default function ShuttlecocksManager() {
     if (!ok) return;
     const updated: TShuttlecock = { ...shuttlecock, deletedAt: nowIso(), updatedAt: nowIso() };
     try {
-      await saveShuttlecock.mutateAsync(updated);
+      await saveShuttlecock(updated);
       toast.success(`Đã ẩn loại cầu "${shuttlecock.name}"`);
     } catch (err) {
       toast.error(`Ẩn thất bại: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
 
-  async function handleRestore(shuttlecock: TShuttlecock): Promise<void> {
-    if (findDuplicate(shuttlecock.name, shuttlecock.id)) {
-      setError(`Đã có loại cầu khác tên "${shuttlecock.name}". Đổi tên loại cầu đó trước khi khôi phục.`);
-      return;
-    }
-    setError(null);
-    const updated: TShuttlecock = { ...shuttlecock, deletedAt: null, updatedAt: nowIso() };
-    try {
-      await saveShuttlecock.mutateAsync(updated);
-      toast.success(`Đã khôi phục loại cầu "${shuttlecock.name}"`);
-    } catch (err) {
-      toast.error(`Khôi phục thất bại: ${err instanceof Error ? err.message : String(err)}`);
-    }
-  }
-
   async function handleSetDefault(shuttlecock: TShuttlecock): Promise<void> {
     if (shuttlecock.isDefault) return;
     try {
-      await setDefaultShuttlecock.mutateAsync(shuttlecock.id);
+      await setDefaultShuttlecock(shuttlecock.id);
       toast.success(`Đã đặt "${shuttlecock.name}" làm loại cầu mặc định`);
     } catch (err) {
       toast.error(`Đặt mặc định thất bại: ${err instanceof Error ? err.message : String(err)}`);
@@ -133,16 +115,16 @@ export default function ShuttlecocksManager() {
         <ShuttlecockAddForm disabled={disabled} onSubmit={handleAdd} />
 
         {!cloudOnline && <p className="text-xs text-destructive">Chưa kết nối Cloud nên không thể chỉnh sửa.</p>}
-        {(error ?? loadErrorMessage) && <p className="text-xs text-destructive">{error ?? loadErrorMessage}</p>}
+        {loadErrorMessage && <p className="text-xs text-destructive">{loadErrorMessage}</p>}
 
         {loading ? (
           <LoadingState />
-        ) : activeShuttlecocks.length === 0 ? (
+        ) : shuttlecocks.length === 0 ? (
           <p className="text-muted-foreground">Chưa có loại cầu nào. Thêm loại cầu đầu tiên ở ô phía trên.</p>
         ) : (
           <ul className="divide-y">
-            {activeShuttlecocks.map((shuttlecock) => {
-              const perShuttle = Math.round(shuttlecock.tubePrice / SHUTTLES_PER_TUBE);
+            {shuttlecocks.map((shuttlecock: TShuttlecock) => {
+              const perShuttle: number = Math.round(shuttlecock.tubePrice / SHUTTLES_PER_TUBE);
 
               return (
                 <li key={shuttlecock.id} className="flex flex-wrap items-center gap-2 py-2 sm:flex-nowrap">
@@ -212,26 +194,6 @@ export default function ShuttlecocksManager() {
               );
             })}
           </ul>
-        )}
-
-        {hiddenShuttlecocks.length > 0 && (
-          <details className="rounded-lg border border-dashed bg-white px-3 py-2">
-            <summary className="cursor-pointer text-xs font-semibold text-muted-foreground">
-              Loại cầu đã ẩn ({hiddenShuttlecocks.length})
-            </summary>
-            <ul className="mt-2 divide-y">
-              {hiddenShuttlecocks.map((shuttlecock) => (
-                <li key={shuttlecock.id} className="flex items-center gap-2 py-1.5 text-sm text-muted-foreground">
-                  <span className="min-w-0 flex-1 truncate">
-                    {shuttlecock.name} · {formatVND(shuttlecock.tubePrice)}/ống
-                  </span>
-                  <Button variant="outline" size="sm" onClick={() => handleRestore(shuttlecock)} disabled={disabled}>
-                    <RotateCcw /> Khôi phục
-                  </Button>
-                </li>
-              ))}
-            </ul>
-          </details>
         )}
       </CardContent>
     </Card>
