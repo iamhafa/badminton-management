@@ -1,50 +1,39 @@
 'use client';
 
 import { CourtAddForm, CourtEditForm } from '@/components/features/settings/CourtForm';
-import type { CourtDraft } from '@/components/features/settings/schema/court.schema';
+import type { CourtDraft } from '@/components/features/settings/schemas/court.schema';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useConnection } from '@/context/ConnectionContext';
-import { useConfirm } from '@/hooks/useConfirm';
-import { CourtApi, GroupApi } from '@/libs/firebase';
+import { ConnectionState, useConnectionStore } from '@/stores/connection.store';
+import { confirm } from '@/stores/confirm.store';
+import LoadingState from '@/components/common/LoadingState';
+import { useCourts, useSaveCourt } from '@/hooks/useQueryCourts';
+import { useGroups } from '@/hooks/useQueryGroups';
 import type { TCourt } from '@/types/court.types';
 import type { TGroup } from '@/types/group.types';
 import { nowIso } from '@/utils/date';
 import { EyeOff, MapPin, Pencil, RotateCcw } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
 export default function CourtsManager() {
-  const { cloudOnline, setOnline, setOffline } = useConnection();
-  const [courts, setCourts] = useState<TCourt[]>([]);
-  const [groups, setGroups] = useState<TGroup[]>([]);
-  const [loading, setLoading] = useState(true);
+  const cloudIsOnline: boolean = useConnectionStore((state: ConnectionState) => state.cloudStatus === 'online');
+  const courtsQuery = useCourts();
+  const groupsQuery = useGroups();
+  const saveCourt = useSaveCourt();
+  const courts = courtsQuery.data;
+  const groups = groupsQuery.data;
+  const loading = courtsQuery.isPending || groupsQuery.isPending;
+  const loadError = courtsQuery.error ?? groupsQuery.error;
+  const loadErrorMessage = loadError
+    ? `Không tải được danh sách sân: ${loadError instanceof Error ? loadError.message : String(loadError)}`
+    : null;
   const [editingId, setEditingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const confirm = useConfirm();
 
-  const loadData = useCallback(async () => {
-    try {
-      setLoading(true);
-      const [courtList, groupList] = await Promise.all([CourtApi.fetchAll(), GroupApi.fetchAll()]);
-      setCourts(courtList);
-      setGroups(groupList);
-      setOnline();
-    } catch (err) {
-      setError(`Không tải được danh sách sân: ${err instanceof Error ? err.message : String(err)}`);
-      setOffline();
-    } finally {
-      setLoading(false);
-    }
-  }, [setOnline, setOffline]);
-
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
-
-  const activeCourts = useMemo(() => courts.filter((v) => !v.deletedAt), [courts]);
-  const hiddenCourts = useMemo(() => courts.filter((v) => v.deletedAt), [courts]);
-  const disabled = !cloudOnline;
+  const activeCourts = useMemo(() => courts?.filter((v) => !v.deletedAt) ?? [], [courts]);
+  const hiddenCourts = useMemo(() => courts?.filter((v) => v.deletedAt) ?? [], [courts]);
+  const disabled = !cloudIsOnline;
 
   function findDuplicate(name: string, exceptId?: string): TCourt | undefined {
     const key = name.trim().toLowerCase();
@@ -52,7 +41,7 @@ export default function CourtsManager() {
   }
 
   function groupsUsing(courtId: string): TGroup[] {
-    return groups.filter((g) => !g.deletedAt && g.defaultCourtId === courtId);
+    return (groups ?? []).filter((g) => !g.deletedAt && g.defaultCourtId === courtId);
   }
 
   async function handleAdd(values: CourtDraft): Promise<string | null> {
@@ -70,8 +59,7 @@ export default function CourtsManager() {
       deletedAt: null,
     };
     try {
-      await CourtApi.save(newCourt);
-      setCourts((prev) => [...prev, newCourt].sort((a, b) => a.name.localeCompare(b.name, 'vi')));
+      await saveCourt.mutateAsync(newCourt);
       toast.success(`Đã thêm sân "${name}"`);
       return null;
     } catch (err) {
@@ -86,8 +74,7 @@ export default function CourtsManager() {
     }
     const updated: TCourt = { ...court, name, address: values.address.trim(), updatedAt: nowIso() };
     try {
-      await CourtApi.save(updated);
-      setCourts((prev) => prev.map((v) => (v.id === court.id ? updated : v)).sort((a, b) => a.name.localeCompare(b.name, 'vi')));
+      await saveCourt.mutateAsync(updated);
       setEditingId(null);
       toast.success(`Đã cập nhật sân "${name}"`);
       return null;
@@ -113,8 +100,7 @@ export default function CourtsManager() {
     if (!ok) return;
     const updated: TCourt = { ...court, deletedAt: nowIso(), updatedAt: nowIso() };
     try {
-      await CourtApi.save(updated);
-      setCourts((prev) => prev.map((v) => (v.id === court.id ? updated : v)));
+      await saveCourt.mutateAsync(updated);
       toast.success(`Đã ẩn sân "${court.name}"`);
     } catch (err) {
       toast.error(`Ẩn thất bại: ${err instanceof Error ? err.message : String(err)}`);
@@ -129,8 +115,7 @@ export default function CourtsManager() {
     setError(null);
     const updated: TCourt = { ...court, deletedAt: null, updatedAt: nowIso() };
     try {
-      await CourtApi.save(updated);
-      setCourts((prev) => prev.map((v) => (v.id === court.id ? updated : v)));
+      await saveCourt.mutateAsync(updated);
       toast.success(`Đã khôi phục sân "${court.name}"`);
     } catch (err) {
       toast.error(`Khôi phục thất bại: ${err instanceof Error ? err.message : String(err)}`);
@@ -147,11 +132,11 @@ export default function CourtsManager() {
       <CardContent className="flex flex-col gap-4">
         <CourtAddForm disabled={disabled} onSubmit={handleAdd} />
 
-        {!cloudOnline && <p className="text-xs text-destructive">Chưa kết nối Cloud nên không thể chỉnh sửa.</p>}
-        {error && <p className="text-xs text-destructive">{error}</p>}
+        {!cloudIsOnline && <p className="text-xs text-destructive">Chưa kết nối Cloud nên không thể chỉnh sửa.</p>}
+        {(error ?? loadErrorMessage) && <p className="text-xs text-destructive">{error ?? loadErrorMessage}</p>}
 
         {loading ? (
-          <p className="text-muted-foreground">Đang tải danh sách sân...</p>
+          <LoadingState />
         ) : activeCourts.length === 0 ? (
           <p className="text-muted-foreground">Chưa có sân nào. Thêm sân đầu tiên ở ô phía trên.</p>
         ) : (

@@ -4,12 +4,12 @@ import RoleBadge, { GenderTag, ROLE_LABELS } from '@/components/common/RoleBadge
 import { MemberAddForm, MemberEditForm } from '@/components/features/settings/MemberForm';
 import { Button } from '@/components/ui/button';
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useConfirm } from '@/hooks/useConfirm';
+import { confirm } from '@/stores/confirm.store';
 import type { TPlayer } from '@/types/player.types';
 import { LoaderCircle, Pencil, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { useBoolean } from 'usehooks-ts';
-import type { MemberDraft } from './schema/member.schema';
+import type { MemberDraft } from './schemas/member.schema';
 
 interface RosterManagerProps {
   title?: string;
@@ -30,7 +30,6 @@ export default function RosterManager({
   const [editingId, setEditingId] = useState<string | null>(null);
   const { value: saving, setTrue: startSaving, setFalse: stopSaving } = useBoolean(false);
   const [error, setError] = useState<string | null>(null);
-  const confirm = useConfirm();
 
   const maleCount = roster.filter((m) => m.gender === 'MALE').length;
   const femaleCount = roster.length - maleCount;

@@ -12,7 +12,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { cn } from 'cn';
 import { useId } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { groupFormSchema, type GroupDraft } from './schema/group.schema';
+import { groupFormSchema, type GroupDraft } from './schemas/group.schema';
 
 interface GroupFormProps {
   initial: GroupDraft;
@@ -90,6 +90,10 @@ export default function GroupForm({ initial, courts, submitLabel, disabled, onSu
             )}
           />
           <FieldError message={errors.femaleCap?.message} />
+          <p className="text-[11px] text-gray-500">
+            Mỗi bạn nữ trả tối đa số tiền này (chưa gồm tiền nước). Nếu chia đều vượt mức trần, phần còn thiếu do các bạn nam chia
+            nhau.
+          </p>
         </div>
 
         <div className="flex flex-col gap-1.5">

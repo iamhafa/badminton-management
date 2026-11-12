@@ -1,0 +1,16 @@
+{
+  "format-and-lint-on-stop": {
+    "Stop": [
+      {
+        "type": "command",
+        "command": "pnpm format",
+        "timeout": 120
+      },
+      {
+        "type": "command",
+        "command": "pnpm lint",
+        "timeout": 120
+      }
+    ]
+  }
+}

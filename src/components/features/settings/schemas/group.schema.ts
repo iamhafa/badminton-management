@@ -7,4 +7,3 @@ export const groupFormSchema = z.object({
 });
 
 export type GroupDraft = z.infer<typeof groupFormSchema>;
-

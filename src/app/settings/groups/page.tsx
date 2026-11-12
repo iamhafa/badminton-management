@@ -2,66 +2,50 @@
 
 import GroupForm from '@/components/features/settings/GroupForm';
 import RosterManager from '@/components/features/settings/RosterManager';
-import type { GroupDraft } from '@/components/features/settings/schema/group.schema';
+import type { GroupDraft } from '@/components/features/settings/schemas/group.schema';
 import { Button } from '@/components/ui/button';
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useConnection } from '@/context/ConnectionContext';
-import { useConfirm } from '@/hooks/useConfirm';
-import { CourtApi, GroupApi, SessionApi } from '@/libs/firebase';
-import type { TCourt } from '@/types/court.types';
+import { ConnectionState, useConnectionStore } from '@/stores/connection.store';
+import { confirm } from '@/stores/confirm.store';
+import LoadingState from '@/components/common/LoadingState';
+import { useCourts } from '@/hooks/useQueryCourts';
+import { useGroups, useSaveGroup } from '@/hooks/useQueryGroups';
+import { useSessions } from '@/hooks/useQuerySessions';
 import type { TGroup } from '@/types/group.types';
 import type { TPlayer } from '@/types/player.types';
-import type { TSessionBill } from '@/types/session.types';
 import { nowIso } from '@/utils/date';
 import { formatVND } from '@/utils/format';
 import { cn } from 'cn';
 import { ChevronDown, EyeOff, MapPin, Pencil, Plus, RotateCcw, Users, Venus } from 'lucide-react';
 import Link from 'next/link';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { useBoolean } from 'usehooks-ts';
 
 const NEW_GROUP_DRAFT: GroupDraft = { name: '', femaleCap: 50000, defaultCourtId: '' };
 
 export default function GroupsManager() {
-  const { cloudOnline, setOnline, setOffline } = useConnection();
-  const [groups, setGroups] = useState<TGroup[]>([]);
-  const [courts, setCourts] = useState<TCourt[]>([]);
-  const [sessions, setSessions] = useState<TSessionBill[]>([]);
-  const [loading, setLoading] = useState(true);
-  const { value: creating, setTrue: openCreating, setFalse: closeCreating } = useBoolean(false);
+  const cloudOnline: boolean = useConnectionStore((state: ConnectionState) => state.cloudStatus === 'online');
+  const groupsQuery = useGroups();
+  const courtsQuery = useCourts();
+  const sessionsQuery = useSessions();
+  const saveGroup = useSaveGroup();
+  const groups = groupsQuery.data;
+  const courts = courtsQuery.data;
+  const sessions = sessionsQuery.data;
+  const loading = groupsQuery.isPending || courtsQuery.isPending || sessionsQuery.isPending;
+  const loadError = groupsQuery.error ?? courtsQuery.error ?? sessionsQuery.error;
+  const loadErrorMessage = loadError
+    ? `Không tải được danh sách nhóm: ${loadError instanceof Error ? loadError.message : String(loadError)}`
+    : null;
   const [editingId, setEditingId] = useState<string | null>(null);
   const [membersOpenId, setMembersOpenId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const confirm = useConfirm();
+  const { value: creating, setTrue: openCreating, setFalse: closeCreating } = useBoolean(false);
 
-  const loadData = useCallback(async () => {
-    try {
-      setLoading(true);
-      const [groupList, courtList, sessionList] = await Promise.all([
-        GroupApi.fetchAll(),
-        CourtApi.fetchAll(),
-        SessionApi.fetchAll(),
-      ]);
-      setGroups(groupList);
-      setCourts(courtList);
-      setSessions(sessionList);
-      setOnline();
-    } catch (err) {
-      setError(`Không tải được danh sách nhóm: ${err instanceof Error ? err.message : String(err)}`);
-      setOffline();
-    } finally {
-      setLoading(false);
-    }
-  }, [setOnline, setOffline]);
-
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
-
-  const activeGroups = useMemo(() => groups.filter((g) => !g.deletedAt), [groups]);
-  const hiddenGroups = useMemo(() => groups.filter((g) => g.deletedAt), [groups]);
-  const activeCourts = useMemo(() => courts.filter((c) => !c.deletedAt), [courts]);
+  const activeGroups = useMemo(() => groups?.filter((g) => !g.deletedAt) ?? [], [groups]);
+  const hiddenGroups = useMemo(() => groups?.filter((g) => g.deletedAt) ?? [], [groups]);
+  const activeCourts = useMemo(() => courts?.filter((c) => !c.deletedAt) ?? [], [courts]);
   const disabled = !cloudOnline;
 
   function duplicateNameError(name: string, exceptId?: string): string | null {
@@ -83,8 +67,7 @@ export default function GroupsManager() {
       deletedAt: null,
     };
     try {
-      await GroupApi.save(group);
-      setGroups((prev) => [...prev, group]);
+      await saveGroup.mutateAsync(group);
       closeCreating();
       setMembersOpenId(group.id);
       toast.success(`Đã tạo nhóm "${group.name}"`);
@@ -99,8 +82,7 @@ export default function GroupsManager() {
     if (dupError) return dupError;
     const updated: TGroup = { ...group, ...draft, updatedAt: nowIso() };
     try {
-      await GroupApi.save(updated);
-      setGroups((prev) => prev.map((g) => (g.id === group.id ? updated : g)));
+      await saveGroup.mutateAsync(updated);
       setEditingId(null);
       toast.success(`Đã cập nhật nhóm "${draft.name}"`);
       return null;
@@ -112,8 +94,7 @@ export default function GroupsManager() {
   async function handleSaveMembers(group: TGroup, members: TPlayer[]): Promise<void> {
     const updated: TGroup = { ...group, members, updatedAt: nowIso() };
     try {
-      await GroupApi.save(updated);
-      setGroups((prev) => prev.map((g) => (g.id === group.id ? updated : g)));
+      await saveGroup.mutateAsync(updated);
       toast.success('Đã lưu danh sách thành viên');
     } catch (err) {
       toast.error(`Lưu thành viên thất bại: ${err instanceof Error ? err.message : String(err)}`);
@@ -131,8 +112,7 @@ export default function GroupsManager() {
     if (!ok) return;
     const updated: TGroup = { ...group, deletedAt: nowIso(), updatedAt: nowIso() };
     try {
-      await GroupApi.save(updated);
-      setGroups((prev) => prev.map((g) => (g.id === group.id ? updated : g)));
+      await saveGroup.mutateAsync(updated);
       if (membersOpenId === group.id) setMembersOpenId(null);
       toast.success(`Đã ẩn nhóm "${group.name}"`);
     } catch (err) {
@@ -149,8 +129,7 @@ export default function GroupsManager() {
     setError(null);
     const updated: TGroup = { ...group, deletedAt: null, updatedAt: nowIso() };
     try {
-      await GroupApi.save(updated);
-      setGroups((prev) => prev.map((g) => (g.id === group.id ? updated : g)));
+      await saveGroup.mutateAsync(updated);
       toast.success(`Đã khôi phục nhóm "${group.name}"`);
     } catch (err) {
       toast.error(`Khôi phục thất bại: ${err instanceof Error ? err.message : String(err)}`);
@@ -158,7 +137,7 @@ export default function GroupsManager() {
   }
 
   function courtName(id: string): string | undefined {
-    return courts.find((v) => v.id === id)?.name;
+    return courts?.find((v) => v.id === id)?.name;
   }
 
   return (
@@ -179,7 +158,7 @@ export default function GroupsManager() {
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
           {!cloudOnline && <p className="text-xs text-destructive">Chưa kết nối Cloud nên không thể chỉnh sửa.</p>}
-          {error && <p className="text-xs text-destructive">{error}</p>}
+          {(error ?? loadErrorMessage) && <p className="text-xs text-destructive">{error ?? loadErrorMessage}</p>}
           {activeCourts.length === 0 && !loading && (
             <p className="text-xs text-muted-foreground">
               Chưa có sân nào.{' '}
@@ -202,7 +181,7 @@ export default function GroupsManager() {
             </div>
           )}
           {loading ? (
-            <p className="text-muted-foreground">Đang tải danh sách nhóm...</p>
+            <LoadingState />
           ) : activeGroups.length === 0 && !creating ? (
             <p className="text-muted-foreground">Chưa có nhóm nào. Bấm "Tạo nhóm" để bắt đầu.</p>
           ) : null}
@@ -212,7 +191,7 @@ export default function GroupsManager() {
       {activeGroups.map((group) => {
         const maleCount = group.members.filter((m) => m.gender === 'MALE').length;
         const femaleCount = group.members.length - maleCount;
-        const sessionCount = sessions.filter((s) => s.groupId === group.id).length;
+        const sessionCount = (sessions ?? []).filter((s) => s.groupId === group.id).length;
         const defaultCourt = courtName(group.defaultCourtId);
         const membersOpen = membersOpenId === group.id;
 
@@ -234,6 +213,11 @@ export default function GroupsManager() {
                     <MapPin className="size-3.5" />
                     {defaultCourt ?? 'Chưa chọn sân hay chơi'}
                   </span>
+                  {defaultCourt && (
+                    <span className="basis-full text-xs text-muted-foreground/80">
+                      Khi tính tiền, sân này được chọn sẵn cho nhóm.
+                    </span>
+                  )}
                   <span>{sessionCount} buổi đã lưu</span>
                 </CardDescription>
                 <CardAction className="flex gap-1">

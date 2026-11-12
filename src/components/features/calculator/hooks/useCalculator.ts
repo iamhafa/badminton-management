@@ -139,6 +139,7 @@ export function useCalculator(group: TGroup | undefined, courts: TCourt[], shutt
   const [guests, setGuests] = useState<TPlayer[]>([]);
   const [noWaterIds, setNoWaterIds] = useState<string[]>([]);
   const [appliedGroupId, setAppliedGroupId] = useState('');
+  const [courtAppliedGroupId, setCourtAppliedGroupId] = useState('');
   const [shuttlecockInitialized, setShuttlecockInitialized] = useState(false);
 
   // Tự động chọn loại cầu mặc định khi vào màn hình tính tiền
@@ -161,14 +162,21 @@ export function useCalculator(group: TGroup | undefined, courts: TCourt[], shutt
     setSelectedIds([]);
     setGuests([]);
     setNoWaterIds([]);
-    const defaultCourtId = courts.some((v) => v.id === group.defaultCourtId) ? group.defaultCourtId : '';
     setInput((prev) => ({
       ...prev,
       groupId: group.id,
       femaleCap: group.femaleCap,
-      courtId: defaultCourtId,
+      courtId: '',
       waterPayerId: '',
     }));
+  }
+
+  // Điền sân mặc định của nhóm. Tách riêng khỏi bước đổi nhóm vì danh sách sân và nhóm được tải độc lập,
+  // nên sân có thể về sau nhóm; chỉ áp dụng khi đã có danh sách sân và chưa chọn sân nào.
+  if (group && courts.length > 0 && courtAppliedGroupId !== group.id) {
+    setCourtAppliedGroupId(group.id);
+    const defaultCourtId = courts.some((v) => v.id === group.defaultCourtId) ? group.defaultCourtId : '';
+    setInput((prev) => ({ ...prev, courtId: prev.courtId || defaultCourtId }));
   }
 
   // Sân đang chọn bị ẩn: bỏ chọn để bắt buộc chọn lại.

@@ -7,4 +7,3 @@ export const memberFormSchema = z.object({
 });
 
 export type MemberDraft = z.infer<typeof memberFormSchema>;
-

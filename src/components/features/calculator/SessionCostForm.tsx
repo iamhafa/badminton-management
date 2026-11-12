@@ -10,7 +10,7 @@ import type { TPlayer } from '@/types/player.types';
 import type { TSessionInput } from '@/types/session.types';
 import type { TShuttlecock } from '@/types/shuttlecock.types';
 import { getWeekdayVN } from '@/utils/date';
-import { FEMALE_CAP_PRESETS, formatVND, SHUTTLES_PER_TUBE } from '@/utils/format';
+import { formatVND, SHUTTLES_PER_TUBE } from '@/utils/format';
 import { cn } from 'cn';
 import { CalendarDays, Droplet, Feather, Grid2X2, MapPin, Minus, Plus, RotateCcw, UsersRound, Venus } from 'lucide-react';
 import Link from 'next/link';
@@ -259,38 +259,21 @@ export default function SessionCostForm({
           </div>
         </div>
 
-        {/* Mức trần ưu tiên nữ */}
+        {/* Mức trần ưu tiên nữ: lấy từ thiết lập nhóm, chỉ đọc */}
         <div className="flex flex-col gap-1.5">
           <Label className="text-[11px] font-bold uppercase tracking-wider text-[#db2777]">MỨC TRẦN ƯU TIÊN NỮ (TỐI ĐA)</Label>
-          <div className="relative">
-            <Venus className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#ec4899]" />
-            <MoneyInput
-              value={input.femaleCap}
-              onChange={(femaleCap) => onChange({ femaleCap })}
-              className="pl-8 pr-16 h-10 font-bold text-[#be185d] border-pink-200 focus-visible:border-pink-400 rounded-lg"
-            />
-            <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-[#ec4899]">
-              VNĐ/nữ
-            </span>
+          <div className="flex h-10 items-center gap-2 rounded-lg border border-pink-200 bg-pink-50/40 px-3">
+            <Venus className="size-4 shrink-0 text-[#ec4899]" />
+            <span className="flex-1 font-bold text-[#be185d]">{formatVND(input.femaleCap)}</span>
+            <span className="text-xs font-bold text-[#ec4899]">VNĐ/nữ</span>
           </div>
           <div className="flex flex-wrap items-center justify-between gap-1.5 mt-0.5">
-            <div className="flex gap-1.5">
-              {FEMALE_CAP_PRESETS.map((preset) => (
-                <button
-                  key={preset}
-                  type="button"
-                  onClick={() => onChange({ femaleCap: preset })}
-                  className={cn(
-                    'rounded px-2.5 py-0.5 text-xs font-semibold border transition-all',
-                    input.femaleCap === preset
-                      ? 'bg-[#fce7f3] border-[#f472b6] text-[#be185d]'
-                      : 'bg-[#f1f5f9] border-transparent text-gray-600 hover:bg-gray-200',
-                  )}
-                >
-                  {preset / 1000}k
-                </button>
-              ))}
-            </div>
+            <span className="text-[10px] sm:text-[11px] text-gray-400 italic">
+              Lấy từ thiết lập nhóm.{' '}
+              <Link href="/settings/groups" className="font-semibold text-[#059669] underline not-italic">
+                Đổi trong Cài đặt
+              </Link>
+            </span>
             <span className="text-[10px] sm:text-[11px] text-gray-400 italic">Áp dụng cả Nữ cố định &amp; vãng lai</span>
           </div>
         </div>

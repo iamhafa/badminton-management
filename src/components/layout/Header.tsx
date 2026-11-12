@@ -1,6 +1,6 @@
 'use client';
 
-import { useConnection } from '@/context/ConnectionContext';
+import { ConnectionState, useConnectionStore } from '@/stores/connection.store';
 import { cn } from 'cn';
 import { Calculator, Cloud, CloudOff, History, LoaderCircle, Settings } from 'lucide-react';
 import Image from 'next/image';
@@ -18,16 +18,17 @@ const NAV_ITEMS = [
 
 interface HeaderProps {
   cloudStatus?: CloudStatus;
-  onRetryConnection?: () => void;
+  onRetryConnection?: VoidFunction;
   historyCount?: number;
 }
 
 export default function Header(props: HeaderProps) {
-  const pathname = usePathname();
-  const connection = useConnection();
+  const pathname: string = usePathname();
+  const storeStatus: CloudStatus = useConnectionStore((state: ConnectionState) => state.cloudStatus);
+  const storeRetry: VoidFunction = useConnectionStore((state: ConnectionState) => state.retryConnection);
 
-  const cloudStatus = props.cloudStatus ?? connection.cloudStatus;
-  const onRetryConnection = props.onRetryConnection ?? connection.retryConnection;
+  const cloudStatus: CloudStatus = props.cloudStatus ?? storeStatus;
+  const onRetryConnection: VoidFunction = props.onRetryConnection ?? storeRetry;
   const historyCount = props.historyCount;
 
   const tabCounts: Record<TabKey, number | undefined> = {
@@ -76,7 +77,8 @@ export default function Header(props: HeaderProps) {
           className="flex h-auto w-full sm:w-auto items-center justify-between sm:justify-start rounded-lg bg-[#075334] p-1 border border-emerald-600/40 gap-1 overflow-x-auto no-scrollbar"
         >
           {NAV_ITEMS.map(({ href, key, label, shortLabel, icon: Icon }) => {
-            const isActive = href === '/' ? pathname === '/' || pathname === '/calculator' : pathname.startsWith(href);
+            const isActive: boolean = href === '/' ? pathname === '/calculator' : pathname.startsWith(href);
+
             return (
               <Link
                 key={href}

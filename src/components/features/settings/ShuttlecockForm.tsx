@@ -4,12 +4,10 @@ import { FieldError } from '@/components/form/FieldError';
 import { MoneyInput } from '@/components/form/MoneyInput';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Check, Plus, X } from 'lucide-react';
-import { useRef } from 'react';
 import { Controller, useForm, type Control, type FieldErrors } from 'react-hook-form';
-import { shuttlecockFormSchema, type ShuttlecockDraft } from './schema/shuttlecock.schema';
+import { shuttlecockFormSchema, type ShuttlecockDraft } from './schemas/shuttlecock.schema';
 
 const EMPTY_SHUTTLECOCK: ShuttlecockDraft = { name: '', tubePrice: 0 };
 
@@ -111,16 +109,13 @@ export function ShuttlecockEditForm({
     mode: 'onChange',
   });
 
-  const formRef = useRef<HTMLFormElement>(null);
-  useEscapeKey(formRef, onCancel);
-
   const submit = handleSubmit(async (values) => {
     const message = await onSubmit(values);
     if (message) setError('name', { message });
   });
 
   return (
-    <form ref={formRef} onSubmit={submit} noValidate className="flex min-w-0 flex-1 flex-wrap items-center gap-2 sm:flex-nowrap">
+    <form onSubmit={submit} noValidate className="flex min-w-0 flex-1 flex-wrap items-center gap-2 sm:flex-nowrap">
       <Input {...register('name')} autoFocus aria-label="Tên loại cầu" aria-invalid={!!errors.name} className="min-w-0 flex-1" />
       <TubePriceField control={control} errors={errors} label="Giá 1 ống mặc định" />
       <Button

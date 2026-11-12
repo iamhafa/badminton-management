@@ -1,64 +1,45 @@
 'use client';
 
 import HistoryList from '@/components/features/history/HistoryList';
-import { useConnection } from '@/context/ConnectionContext';
-import { GroupApi, SessionApi } from '@/libs/firebase';
-import type { TGroup } from '@/types/group.types';
-import type { TSessionBill } from '@/types/session.types';
-import { useCallback, useEffect, useState } from 'react';
+import { useGroups } from '@/hooks/useQueryGroups';
+import { useDeleteSession, useSessions } from '@/hooks/useQuerySessions';
+import { useConnectionStore } from '@/stores/connection.store';
 import { toast } from 'sonner';
 
 export default function HistoryPage() {
-  const { cloudOnline, setOnline, setOffline } = useConnection();
-  const [sessions, setSessions] = useState<TSessionBill[]>([]);
-  const [groups, setGroups] = useState<TGroup[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const cloudOnline = useConnectionStore((s) => s.cloudStatus === 'online');
+  const sessionsQuery = useSessions();
+  const groupsQuery = useGroups();
+  const deleteSession = useDeleteSession();
 
-  const loadData = useCallback(async () => {
-    try {
-      setLoading(true);
-      const [sessionList, groupList] = await Promise.all([SessionApi.fetchAll(), GroupApi.fetchAll()]);
-      setSessions(sessionList);
-      setGroups(groupList);
-      setError(null);
-      setOnline();
-    } catch (err) {
-      setError(`Không tải được lịch sử: ${err instanceof Error ? err.message : String(err)}`);
-      setOffline();
-    } finally {
-      setLoading(false);
-    }
-  }, [setOnline, setOffline]);
+  const loadError = sessionsQuery.error ?? groupsQuery.error;
+  const error = loadError
+    ? `Không tải được lịch sử: ${loadError instanceof Error ? loadError.message : String(loadError)}`
+    : null;
 
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
+  function handleRefresh(): void {
+    void sessionsQuery.refetch();
+    void groupsQuery.refetch();
+  }
 
   async function handleDeleteSession(id: string): Promise<void> {
-    setSessions((prev) => prev.filter((s) => s.id !== id));
-    if (!cloudOnline) {
-      toast.info('Đã xóa khỏi danh sách trên máy.');
-      return;
-    }
     try {
-      await SessionApi.delete(id);
+      await deleteSession.mutateAsync(id);
       toast.success('Đã xóa buổi chơi khỏi Firebase');
     } catch (err) {
       toast.error(`Xóa thất bại: ${err instanceof Error ? err.message : String(err)}`);
-      loadData();
     }
   }
 
   return (
     <div className="flex flex-col gap-4">
       <HistoryList
-        sessions={sessions}
-        groups={groups}
-        loading={loading}
+        sessions={sessionsQuery.data ?? []}
+        groups={groupsQuery.data ?? []}
+        loading={sessionsQuery.isFetching || groupsQuery.isFetching}
         error={error}
         cloudOnline={cloudOnline}
-        onRefresh={loadData}
+        onRefresh={handleRefresh}
         onDelete={handleDeleteSession}
       />
     </div>

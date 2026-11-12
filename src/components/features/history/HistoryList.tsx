@@ -4,7 +4,7 @@ import RoleBadge, { GenderTag } from '@/components/common/RoleBadge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { useConfirm } from '@/hooks/useConfirm';
+import { confirm } from '@/stores/confirm.store';
 import type { TGroup } from '@/types/group.types';
 import type { TSessionBill } from '@/types/session.types';
 import { formatDateTimeVN } from '@/utils/date';
@@ -34,7 +34,6 @@ export default function HistoryList({ sessions, groups, loading, error, cloudOnl
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [groupFilter, setGroupFilter] = useState<string>(ALL_GROUPS);
-  const confirm = useConfirm();
 
   /** Tên nhóm lưu trong buổi chơi; nếu thiếu thì lấy tên hiện tại của nhóm. */
   function groupNameOf(bill: TSessionBill): string {

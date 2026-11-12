@@ -3,12 +3,10 @@
 import { FieldError } from '@/components/form/FieldError';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Check, Plus, X } from 'lucide-react';
-import { useRef } from 'react';
 import { useForm } from 'react-hook-form';
-import { courtFormSchema, type CourtDraft } from './schema/court.schema';
+import { courtFormSchema, type CourtDraft } from './schemas/court.schema';
 
 const EMPTY_COURT: CourtDraft = { name: '', address: '' };
 
@@ -23,7 +21,11 @@ export function CourtAddForm({ disabled, onSubmit }: { disabled: boolean; onSubm
     reset,
     setError,
     formState: { errors, isValid, isSubmitting },
-  } = useForm<CourtDraft>({ resolver: zodResolver(courtFormSchema), defaultValues: EMPTY_COURT, mode: 'onChange' });
+  } = useForm<CourtDraft>({
+    resolver: zodResolver(courtFormSchema),
+    defaultValues: EMPTY_COURT,
+    mode: 'onChange',
+  });
 
   const submit = handleSubmit(async (values) => {
     const message = await onSubmit(values);
@@ -75,16 +77,13 @@ export function CourtEditForm({
     formState: { errors, isValid, isSubmitting },
   } = useForm<CourtDraft>({ resolver: zodResolver(courtFormSchema), defaultValues: initial, mode: 'onChange' });
 
-  const formRef = useRef<HTMLFormElement>(null);
-  useEscapeKey(formRef, onCancel);
-
   const submit = handleSubmit(async (values) => {
     const message = await onSubmit(values);
     if (message) setError('name', { message });
   });
 
   return (
-    <form ref={formRef} onSubmit={submit} noValidate className="flex min-w-0 flex-1 flex-wrap items-center gap-2 sm:flex-nowrap">
+    <form onSubmit={submit} noValidate className="flex min-w-0 flex-1 flex-wrap items-center gap-2 sm:flex-nowrap">
       <Input {...register('name')} autoFocus aria-label="Tên sân" aria-invalid={!!errors.name} className="min-w-0 flex-1" />
       <Input {...register('address')} aria-label="Địa chỉ sân" placeholder="Địa chỉ" className="min-w-0 flex-1" />
       <Button

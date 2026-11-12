@@ -6,4 +6,3 @@ export const shuttlecockFormSchema = z.object({
 });
 
 export type ShuttlecockDraft = z.infer<typeof shuttlecockFormSchema>;
-

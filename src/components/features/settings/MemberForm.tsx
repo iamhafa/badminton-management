@@ -5,12 +5,10 @@ import { FieldError } from '@/components/form/FieldError';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
-import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Check, Plus, X } from 'lucide-react';
-import { useRef } from 'react';
 import { useForm, type UseFormRegister } from 'react-hook-form';
-import { memberFormSchema, type MemberDraft } from './schema/member.schema';
+import { memberFormSchema, type MemberDraft } from './schemas/member.schema';
 
 const EMPTY_MEMBER: MemberDraft = { name: '', gender: 'MALE', role: '' };
 
@@ -34,7 +32,11 @@ export function MemberAddForm({ disabled, onSubmit }: { disabled: boolean; onSub
     reset,
     setError,
     formState: { errors, isValid, isSubmitting },
-  } = useForm<MemberDraft>({ resolver: zodResolver(memberFormSchema), defaultValues: EMPTY_MEMBER, mode: 'onChange' });
+  } = useForm<MemberDraft>({
+    resolver: zodResolver(memberFormSchema),
+    defaultValues: EMPTY_MEMBER,
+    mode: 'onChange',
+  });
 
   const submit = handleSubmit(async (values) => {
     const message = await onSubmit(values);
@@ -83,16 +85,13 @@ export function MemberEditForm({
     formState: { errors, isValid, isSubmitting },
   } = useForm<MemberDraft>({ resolver: zodResolver(memberFormSchema), defaultValues: initial, mode: 'onChange' });
 
-  const formRef = useRef<HTMLFormElement>(null);
-  useEscapeKey(formRef, onCancel);
-
   const submit = handleSubmit(async (values) => {
     const message = await onSubmit(values);
     if (message) setError('name', { message });
   });
 
   return (
-    <form ref={formRef} onSubmit={submit} noValidate className="flex min-w-0 flex-1 flex-wrap items-center gap-2 sm:flex-nowrap">
+    <form onSubmit={submit} noValidate className="flex min-w-0 flex-1 flex-wrap items-center gap-2 sm:flex-nowrap">
       <Input
         {...register('name')}
         autoFocus

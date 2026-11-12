@@ -6,4 +6,3 @@ export const guestFormSchema = z.object({
 });
 
 export type GuestDraft = z.infer<typeof guestFormSchema>;
-

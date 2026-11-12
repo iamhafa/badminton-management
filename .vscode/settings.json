@@ -1,5 +1,5 @@
 {
 	"editor.formatOnSave": true,
 	"editor.defaultFormatter": "oxc.oxc-vscode",
-	"material-icon-theme.activeIconPack": "react"
+	"material-icon-theme.activeIconPack": "react_redux"
 }

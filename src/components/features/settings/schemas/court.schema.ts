@@ -6,4 +6,3 @@ export const courtFormSchema = z.object({
 });
 
 export type CourtDraft = z.infer<typeof courtFormSchema>;
-

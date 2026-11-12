@@ -3,19 +3,20 @@
 import BillSummaryCard from '@/components/features/calculator/BillSummaryCard';
 import ParticipantSelector from '@/components/features/calculator/ParticipantSelector';
 import SessionCostForm from '@/components/features/calculator/SessionCostForm';
-import { useConnection } from '@/context/ConnectionContext';
-import { useCalculator } from '@/hooks/useCalculator';
-import { useConfirm } from '@/hooks/useConfirm';
-import { CourtApi, GroupApi, SessionApi, ShuttlecockApi } from '@/libs/firebase';
-import type { TCourt } from '@/types/court.types';
-import type { TGroup } from '@/types/group.types';
+import { useConnectionStore } from '@/stores/connection.store';
+import { confirm } from '@/stores/confirm.store';
+import LoadingState from '@/components/common/LoadingState';
+import { useCourts } from '@/hooks/useQueryCourts';
+import { useGroups } from '@/hooks/useQueryGroups';
+import { useSaveSession } from '@/hooks/useQuerySessions';
+import { useShuttlecocks } from '@/hooks/useQueryShuttlecocks';
 import type { TSessionBill } from '@/types/session.types';
-import type { TShuttlecock } from '@/types/shuttlecock.types';
 import { nowIso } from '@/utils/date';
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { toast } from 'sonner';
 import { useIsClient, useLocalStorage } from 'usehooks-ts';
+import { useCalculator } from '@/components/features/calculator/hooks/useCalculator';
 
 const SELECTED_GROUP_STORAGE_KEY = 'badminton:selectedGroupId';
 const SELECTED_GROUP_STORAGE_OPTIONS = {
@@ -27,42 +28,22 @@ const SELECTED_GROUP_STORAGE_OPTIONS = {
 export default function CalculatorPage() {
   const hydrated = useIsClient();
   const router = useRouter();
-  const { cloudOnline, setOnline, setOffline } = useConnection();
-  const confirm = useConfirm();
+  const cloudOnline = useConnectionStore((s) => s.cloudStatus === 'online');
 
-  const [groups, setGroups] = useState<TGroup[]>([]);
-  const [courts, setCourts] = useState<TCourt[]>([]);
-  const [shuttlecocks, setShuttlecocks] = useState<TShuttlecock[]>([]);
-  const [loading, setLoading] = useState(true);
+  const groupsQuery = useGroups();
+  const courtsQuery = useCourts();
+  const shuttlecocksQuery = useShuttlecocks();
+  const saveSession = useSaveSession();
+  const groups = groupsQuery.data;
+  const courts = courtsQuery.data;
+  const shuttlecocks = shuttlecocksQuery.data;
+  const loading = groupsQuery.isPending || courtsQuery.isPending || shuttlecocksQuery.isPending;
 
   const [preferredGroupId, selectGroup] = useLocalStorage<string>(SELECTED_GROUP_STORAGE_KEY, '', SELECTED_GROUP_STORAGE_OPTIONS);
 
-  const loadData = useCallback(async () => {
-    try {
-      setLoading(true);
-      const [groupList, courtList, shuttlecockList] = await Promise.all([
-        GroupApi.fetchAll(),
-        CourtApi.fetchAll(),
-        ShuttlecockApi.fetchAll(),
-      ]);
-      setGroups(groupList);
-      setCourts(courtList);
-      setShuttlecocks(shuttlecockList);
-      setOnline();
-    } catch {
-      setOffline();
-    } finally {
-      setLoading(false);
-    }
-  }, [setOnline, setOffline]);
-
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
-
-  const activeGroups = useMemo(() => groups.filter((g) => !g.deletedAt), [groups]);
-  const activeCourts = useMemo(() => courts.filter((v) => !v.deletedAt), [courts]);
-  const activeShuttlecocks = useMemo(() => shuttlecocks.filter((s) => !s.deletedAt), [shuttlecocks]);
+  const activeGroups = useMemo(() => groups?.filter((g) => !g.deletedAt) ?? [], [groups]);
+  const activeCourts = useMemo(() => courts?.filter((v) => !v.deletedAt) ?? [], [courts]);
+  const activeShuttlecocks = useMemo(() => shuttlecocks?.filter((s) => !s.deletedAt) ?? [], [shuttlecocks]);
 
   const selectedGroup = useMemo(
     () => activeGroups.find((g) => g.id === preferredGroupId) ?? activeGroups[0],
@@ -111,7 +92,7 @@ export default function CalculatorPage() {
       return;
     }
     try {
-      await SessionApi.save(newBill);
+      await saveSession.mutateAsync(newBill);
       toast.success('Đã lưu buổi chơi vào Lịch sử (Firebase)');
     } catch (err) {
       toast.error(`Không thể lưu lên Cloud: ${err instanceof Error ? err.message : String(err)}`);
@@ -127,11 +108,7 @@ export default function CalculatorPage() {
         : undefined;
 
   if (!hydrated || !input.isoDate) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <p className="text-sm text-muted-foreground animate-pulse">Đang tải bảng tính tiền...</p>
-      </div>
-    );
+    return <LoadingState />;
   }
 
   return (
