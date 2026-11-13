@@ -1,10 +1,10 @@
 'use client';
 
-import HistoryList from '@/components/features/history/HistoryList';
 import { useQueryGroups } from '@/hooks/useQueryGroups';
 import { useMutateDeleteSession, useQuerySessions } from '@/hooks/useQuerySessions';
 import { useConnectionStore } from '@/stores/connection.store';
 import { toast } from 'sonner';
+import HistoryList from './components/HistoryList';
 
 export default function HistoryPage() {
   const cloudOnline = useConnectionStore((s) => s.cloudStatus === 'online');

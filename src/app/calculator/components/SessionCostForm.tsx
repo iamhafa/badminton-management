@@ -4,6 +4,7 @@ import { MoneyInput } from '@/components/form/MoneyInput';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
+import { Switch } from '@/components/ui/switch';
 import type { TCourt } from '@/types/court.types';
 import type { TGroup } from '@/types/group.types';
 import type { TPlayer } from '@/types/player.types';
@@ -16,7 +17,7 @@ import { CalendarDays, Droplet, Feather, Grid2X2, MapPin, Minus, Plus, RotateCcw
 import Link from 'next/link';
 
 const COURT_FEE_PRESETS = [240000, 280000, 300000, 360000];
-const WATER_FEE_PRESETS = [0, 35000, 40000, 50000];
+const WATER_FEE_PRESETS = [35000, 40000, 50000];
 
 // Giá trị mẫu khi bấm "Khôi phục mẫu ví dụ".
 // Giữ nguyên nhóm, sân, loại cầu và ngày chơi; mức trần nữ và giá ống lấy theo nhóm / loại cầu đang chọn.
@@ -27,7 +28,7 @@ const DEFAULT_INPUT_VALUES: Omit<
   hoursPlayed: 2,
   courtFee: 280000,
   shuttlesUsed: 5,
-  waterFee: 40000,
+  waterFee: 0,
   waterPayerId: '',
 };
 
@@ -43,6 +44,9 @@ interface SessionCostFormProps {
   shuttlecocks: TShuttlecock[];
   /** Đổi nhóm (trang cha có thể hỏi xác nhận trước khi xóa lựa chọn người chơi). */
   onGroupChange: (groupId: string) => void;
+  /** Có tính tiền nước lọc cho buổi chơi này hay không (tùy chọn). */
+  waterEnabled: boolean;
+  onWaterEnabledChange: (enabled: boolean) => void;
 }
 
 export default function SessionCostForm({
@@ -53,14 +57,17 @@ export default function SessionCostForm({
   courts,
   shuttlecocks,
   onGroupChange,
+  waterEnabled,
+  onWaterEnabledChange,
 }: SessionCostFormProps) {
-  const shuttleUnit = input.tubePrice / SHUTTLES_PER_TUBE;
-  const shuttleTotalCost = shuttleUnit * input.shuttlesUsed;
-  const weekday = getWeekdayVN(input.isoDate);
+  const shuttleUnit: number = input.tubePrice / SHUTTLES_PER_TUBE;
+  const shuttleTotalCost: number = shuttleUnit * input.shuttlesUsed;
+  const weekday: string = getWeekdayVN(input.isoDate);
   const groupFemaleCap = groups.find((g) => g.id === input.groupId)?.femaleCap;
   const selectedShuttlecock = shuttlecocks.find((s) => s.id === input.shuttlecockId);
 
   function handleReset() {
+    onWaterEnabledChange(false);
     onChange({
       ...DEFAULT_INPUT_VALUES,
       ...(groupFemaleCap ? { femaleCap: groupFemaleCap } : {}),
@@ -187,7 +194,7 @@ export default function SessionCostForm({
                 type="date"
                 value={input.isoDate}
                 onChange={(e) => e.target.value && onChange({ isoDate: e.target.value })}
-                className="pl-9 h-10 min-h-10 w-full appearance-none [-webkit-appearance:none] [color-scheme:light] font-semibold text-gray-800 rounded-lg border-gray-200"
+                className="pl-9 h-10 min-h-10 w-full appearance-none [-webkit-appearance:none] scheme-light font-semibold text-gray-800 rounded-lg border-gray-200"
               />
             </div>
             {weekday && (
@@ -228,7 +235,7 @@ export default function SessionCostForm({
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {/* Tiền thuê sân */}
         <div className="flex flex-col gap-1.5">
-          <Label className="text-[11px] font-bold uppercase tracking-wider text-gray-500">TIỀN THUÊ SÂN</Label>
+          <Label className="text-[11px] font-bold uppercase tracking-wider text-gray-500">Chi phí thuê sân</Label>
           <div className="relative">
             <Grid2X2 className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-gray-400" />
             <MoneyInput
@@ -261,7 +268,7 @@ export default function SessionCostForm({
 
         {/* Mức trần ưu tiên nữ: lấy từ thiết lập nhóm, chỉ đọc */}
         <div className="flex flex-col gap-1.5">
-          <Label className="text-[11px] font-bold uppercase tracking-wider text-[#db2777]">MỨC TRẦN ƯU TIÊN NỮ (TỐI ĐA)</Label>
+          <Label className="text-[11px] font-bold uppercase tracking-wider text-[#db2777]">Mức trần ưu tiên nữ (tối đa)</Label>
           <div className="flex h-10 items-center gap-2 rounded-lg border border-pink-200 bg-pink-50/40 px-3">
             <Venus className="size-4 shrink-0 text-[#ec4899]" />
             <span className="flex-1 font-bold text-[#be185d]">{formatVND(input.femaleCap)}</span>
@@ -377,93 +384,114 @@ export default function SessionCostForm({
 
       {/* Tiền nước lọc (Card xanh dương) */}
       <div className="rounded-xl border border-[#bfdbfe] bg-[#f0f7ff] p-3.5 sm:p-4 flex flex-col gap-3">
-        <div className="flex items-center gap-1.5 text-xs font-bold text-[#1d4ed8] uppercase tracking-wide">
-          <Droplet className="size-4 text-[#2563eb] shrink-0" />
-          <span>TIỀN NƯỚC LỌC</span>
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5 text-xs font-bold text-[#1d4ed8] uppercase tracking-wide">
+            <Droplet className="size-4 text-[#2563eb] shrink-0" />
+            <span>CHI PHÍ NƯỚC LỌC</span>
+          </div>
+          <label className="flex cursor-pointer items-center gap-2 text-xs font-semibold text-gray-500">
+            Tính tiền nước lọc
+            <Switch
+              checked={waterEnabled}
+              onCheckedChange={(checked) => onWaterEnabledChange(checked === true)}
+              className="data-checked:bg-[#2563eb]"
+            />
+          </label>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          {/* Số tiền nước */}
-          <div className="flex flex-col gap-1.5">
-            <Label className="text-[11px] font-medium text-gray-600">Số tiền (VNĐ)</Label>
-            <div className="relative">
-              <MoneyInput
-                value={input.waterFee}
-                onChange={(waterFee) => onChange({ waterFee })}
-                className="h-10 bg-white border-gray-200 pr-12 font-bold text-gray-900 rounded-lg"
-              />
-              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-gray-400">
-                VNĐ
-              </span>
-            </div>
-            <div className="flex flex-wrap gap-1.5 mt-0.5">
-              {WATER_FEE_PRESETS.map((preset) => (
-                <button
-                  key={preset}
-                  type="button"
-                  onClick={() => onChange({ waterFee: preset })}
-                  className={cn(
-                    'rounded px-2.5 py-0.5 text-xs font-semibold border transition-all',
-                    input.waterFee === preset
-                      ? 'bg-[#dbeafe] border-[#3b82f6] text-[#1d4ed8]'
-                      : 'bg-white border-gray-200 text-gray-600 hover:bg-blue-50',
-                  )}
+        {waterEnabled && (
+          <>
+            {input.waterFee === 0 && (
+              <p className="text-[11px] font-semibold text-red-600">Bắt buộc nhập số tiền nước khi bật tính tiền nước.</p>
+            )}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {/* Số tiền nước */}
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-[11px] font-medium text-gray-600">Số tiền</Label>
+                <div className="relative">
+                  <MoneyInput
+                    value={input.waterFee}
+                    onChange={(waterFee) => onChange({ waterFee })}
+                    aria-invalid={input.waterFee === 0 || undefined}
+                    className={cn(
+                      'h-10 bg-white pr-12 font-bold text-gray-900 rounded-lg',
+                      input.waterFee === 0 ? 'border-red-300' : 'border-gray-200',
+                    )}
+                  />
+                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-gray-400">
+                    VNĐ
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-1.5 mt-0.5">
+                  {WATER_FEE_PRESETS.map((preset) => (
+                    <button
+                      key={preset}
+                      type="button"
+                      onClick={() => onChange({ waterFee: preset })}
+                      className={cn(
+                        'rounded px-2.5 py-0.5 text-xs font-semibold border transition-all',
+                        input.waterFee === preset
+                          ? 'bg-[#dbeafe] border-[#3b82f6] text-[#1d4ed8]'
+                          : 'bg-white border-gray-200 text-gray-600 hover:bg-blue-50',
+                      )}
+                    >
+                      {preset / 1000}k
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Người mua nước */}
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-[11px] font-medium text-gray-600">Người mua nước</Label>
+                <NativeSelect
+                  value={input.waterPayerId}
+                  onChange={(e) => onChange({ waterPayerId: e.target.value })}
+                  className="w-full [&_select]:h-10 [&_select]:bg-white [&_select]:border-gray-200 [&_select]:rounded-lg"
                 >
-                  {preset === 0 ? '0đ' : `${preset / 1000}k`}
-                </button>
-              ))}
+                  {participants.length === 0 ? (
+                    <NativeSelectOption value="">Chưa có người chơi nào được chọn</NativeSelectOption>
+                  ) : (
+                    participants.map((p) => {
+                      const roleTag =
+                        p.role === 'LEADER'
+                          ? ' (Trưởng nhóm)'
+                          : p.role === 'VICE_LEADER'
+                            ? ' (Phó nhóm)'
+                            : p.type === 'GUEST'
+                              ? ' (Vãng lai)'
+                              : '';
+                      return (
+                        <NativeSelectOption key={p.id} value={p.id}>
+                          {p.name}
+                          {roleTag}
+                        </NativeSelectOption>
+                      );
+                    })
+                  )}
+                </NativeSelect>
+                <p className="text-[11px] text-gray-500">Tiền nước sẽ được trừ thẳng vào số tiền cần đóng của người này.</p>
+              </div>
             </div>
-          </div>
 
-          {/* Người mua nước */}
-          <div className="flex flex-col gap-1.5">
-            <Label className="text-[11px] font-medium text-gray-600">Người mua nước</Label>
-            <NativeSelect
-              value={input.waterPayerId}
-              onChange={(e) => onChange({ waterPayerId: e.target.value })}
-              className="w-full [&_select]:h-10 [&_select]:bg-white [&_select]:border-gray-200 [&_select]:rounded-lg"
-            >
-              {participants.length === 0 ? (
-                <NativeSelectOption value="">Chưa có người chơi nào được chọn</NativeSelectOption>
-              ) : (
-                participants.map((p) => {
-                  const roleTag =
-                    p.role === 'LEADER'
-                      ? ' (Trưởng nhóm)'
-                      : p.role === 'VICE_LEADER'
-                        ? ' (Phó nhóm)'
-                        : p.type === 'GUEST'
-                          ? ' (Vãng lai)'
-                          : '';
-                  return (
-                    <NativeSelectOption key={p.id} value={p.id}>
-                      {p.name}
-                      {roleTag}
-                    </NativeSelectOption>
-                  );
-                })
-              )}
-            </NativeSelect>
-            <p className="text-[11px] text-gray-500">Tiền nước sẽ được trừ thẳng vào số tiền cần đóng của người này.</p>
-          </div>
-        </div>
-
-        {input.waterFee > 0 && participants.length > 0 && (
-          <div className="flex items-center justify-between border-t border-blue-200/70 pt-2 text-xs text-blue-900 font-medium">
-            <span>
-              Chia cho <strong>{participants.filter((p) => p.drinksWater !== false).length}</strong> / {participants.length} người
-              có uống nước
-            </span>
-            <span className="font-bold text-blue-700">
-              ~
-              {formatVND(
-                participants.filter((p) => p.drinksWater !== false).length > 0
-                  ? input.waterFee / participants.filter((p) => p.drinksWater !== false).length
-                  : 0,
-              )}
-              /người
-            </span>
-          </div>
+            {input.waterFee > 0 && participants.length > 0 && (
+              <div className="flex items-center justify-between border-t border-blue-200/70 pt-2 text-xs text-blue-900 font-medium">
+                <span>
+                  Chia cho <strong>{participants.filter((p) => p.drinksWater !== false).length}</strong> / {participants.length}{' '}
+                  người có uống nước
+                </span>
+                <span className="font-bold text-blue-700">
+                  ~
+                  {formatVND(
+                    participants.filter((p) => p.drinksWater !== false).length > 0
+                      ? input.waterFee / participants.filter((p) => p.drinksWater !== false).length
+                      : 0,
+                  )}
+                  /người
+                </span>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

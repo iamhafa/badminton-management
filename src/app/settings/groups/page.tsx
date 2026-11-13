@@ -1,8 +1,8 @@
 'use client';
 
 import LoadingState from '@/components/common/LoadingState';
-import GroupForm from '@/components/features/settings/GroupForm';
-import type { GroupDraft } from '@/components/features/settings/schemas/group.schema';
+import GroupForm from './components/GroupForm';
+import type { GroupDraft } from './schemas/group.schema';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useQueryCourts } from '@/hooks/useQueryCourts';
@@ -59,7 +59,7 @@ export default function GroupsManager() {
       await saveGroup(group);
       closeCreating();
       toast.success(`Đã tạo nhóm "${group.name}"`);
-      router.push(`/settings/groups/${group.id}` as any);
+      router.push(`/settings/groups/${group.id}`);
       return null;
     } catch (err) {
       return `Lưu thất bại: ${err instanceof Error ? err.message : String(err)}`;
@@ -144,7 +144,7 @@ export default function GroupsManager() {
         return (
           <Card key={group.id} size="sm" className="hover:border-emerald-400/80 transition-colors">
             <CardHeader className="flex flex-col gap-2">
-              <div className="flex items-start justify-between gap-2">
+              <div className="flex items-center justify-between gap-2">
                 <CardTitle className="text-base">
                   <Link
                     href={`/settings/groups/${group.id}`}
@@ -191,7 +191,7 @@ export default function GroupsManager() {
                 </span>
                 <span className="inline-flex items-start gap-1 text-gray-700">
                   <MapPin className="size-3.5 shrink-0 text-gray-500 mt-0.5" />
-                  <span className="break-words">{defaultCourt ?? 'Chưa chọn sân hay chơi'}</span>
+                  <span className="wrap-break-word">{defaultCourt ?? 'Chưa chọn sân hay chơi'}</span>
                 </span>
                 <span className="inline-flex items-center gap-1 shrink-0 text-gray-500">{sessionCount} buổi đã lưu</span>
               </CardDescription>

@@ -155,7 +155,7 @@ export default function HistoryList({ sessions, groups, loading, error, cloudOnl
                             Cầu{bill.shuttleBrand ? ` ${bill.shuttleBrand}` : ''}: {formatVND(bill.shuttleTotalCost)} (
                             {bill.shuttlesUsed} quả)
                           </span>
-                          <span>Nước: {formatVND(bill.waterFee)}</span>
+                          {bill.waterFee > 0 && <span>Nước: {formatVND(bill.waterFee)}</span>}
                           <span>
                             {bill.hoursPlayed} giờ · Trần nữ {formatVND(bill.femaleCap)}
                           </span>

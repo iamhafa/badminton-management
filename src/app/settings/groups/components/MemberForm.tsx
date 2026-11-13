@@ -8,7 +8,7 @@ import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select'
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Check, Plus, X } from 'lucide-react';
 import { useForm, type UseFormRegister } from 'react-hook-form';
-import { memberFormSchema, type MemberDraft } from './schemas/member.schema';
+import { memberFormSchema, type MemberDraft } from '../schemas/member.schema';
 
 const EMPTY_MEMBER: MemberDraft = { name: '', gender: 'MALE', role: '' };
 

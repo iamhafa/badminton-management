@@ -1,8 +1,8 @@
 'use client';
 
 import LoadingState from '@/components/common/LoadingState';
-import type { ShuttlecockDraft } from '@/components/features/settings/schemas/shuttlecock.schema';
-import { ShuttlecockAddForm, ShuttlecockEditForm } from '@/components/features/settings/ShuttlecockForm';
+import type { ShuttlecockDraft } from './schemas/shuttlecock.schema';
+import { ShuttlecockAddForm, ShuttlecockEditForm } from './components/ShuttlecockForm';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useMutateSetDefaultShuttlecock, useMutateShuttlecock, useQueryShuttlecocks } from '@/hooks/useQueryShuttlecocks';

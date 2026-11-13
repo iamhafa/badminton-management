@@ -1,7 +1,7 @@
 'use client';
 
 import RoleBadge, { GenderTag, ROLE_LABELS } from '@/components/common/RoleBadge';
-import { MemberAddForm, MemberEditForm } from '@/components/features/settings/MemberForm';
+import { MemberAddForm, MemberEditForm } from './MemberForm';
 import { Button } from '@/components/ui/button';
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { confirm } from '@/stores/confirm.store';
@@ -10,7 +10,7 @@ import { cn } from 'cn';
 import { LoaderCircle, Pencil, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { useBoolean } from 'usehooks-ts';
-import type { MemberDraft } from './schemas/member.schema';
+import type { MemberDraft } from '../schemas/member.schema';
 
 interface RosterManagerProps {
   title?: string;

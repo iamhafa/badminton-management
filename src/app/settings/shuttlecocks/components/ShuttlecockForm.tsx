@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Check, Plus, X } from 'lucide-react';
 import { Controller, useForm, type Control, type FieldErrors } from 'react-hook-form';
-import { shuttlecockFormSchema, type ShuttlecockDraft } from './schemas/shuttlecock.schema';
+import { shuttlecockFormSchema, type ShuttlecockDraft } from '../schemas/shuttlecock.schema';
 
 const EMPTY_SHUTTLECOCK: ShuttlecockDraft = { name: '', tubePrice: 0 };
 

@@ -82,7 +82,7 @@ export default function BillSummaryCard({ bill, onSave, cloudOnline, saveBlocked
         </div>
 
         {/* 3 Cost boxes */}
-        <div className="grid grid-cols-3 gap-1.5 sm:gap-2 pt-1">
+        <div className={`grid gap-1.5 sm:gap-2 pt-1 ${bill.waterFee > 0 ? 'grid-cols-3' : 'grid-cols-2'}`}>
           <div className="flex flex-col items-center justify-center rounded-lg bg-[#16382c] px-1 sm:px-2 py-2 text-center border border-[#204a3c]">
             <span className="text-[9px] sm:text-[10px] text-gray-400 leading-tight">Tiền sân ({bill.hoursPlayed}h)</span>
             <span className="text-[11px] sm:text-xs font-bold text-white mt-0.5">{formatVND(bill.courtFee)}</span>
@@ -93,15 +93,17 @@ export default function BillSummaryCard({ bill, onSave, cloudOnline, saveBlocked
             </span>
             <span className="text-[11px] sm:text-xs font-bold text-[#facc15] mt-0.5">{formatVND(bill.shuttleTotalCost)}</span>
           </div>
-          <div className="flex flex-col items-center justify-center rounded-lg bg-[#16382c] px-1 sm:px-2 py-2 text-center border border-[#204a3c]">
-            <span className="text-[9px] sm:text-[10px] text-gray-400 leading-tight">
-              Nước{' '}
-              {bill.waterDrinkersCount !== undefined && bill.waterDrinkersCount < bill.totalCount
-                ? `(${bill.waterDrinkersCount}u)`
-                : 'lọc'}
-            </span>
-            <span className="text-[11px] sm:text-xs font-bold text-[#38bdf8] mt-0.5">{formatVND(bill.waterFee)}</span>
-          </div>
+          {bill.waterFee > 0 && (
+            <div className="flex flex-col items-center justify-center rounded-lg bg-[#16382c] px-1 sm:px-2 py-2 text-center border border-[#204a3c]">
+              <span className="text-[9px] sm:text-[10px] text-gray-400 leading-tight">
+                Nước{' '}
+                {bill.waterDrinkersCount !== undefined && bill.waterDrinkersCount < bill.totalCount
+                  ? `(${bill.waterDrinkersCount}u)`
+                  : 'lọc'}
+              </span>
+              <span className="text-[11px] sm:text-xs font-bold text-[#38bdf8] mt-0.5">{formatVND(bill.waterFee)}</span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -161,7 +163,7 @@ export default function BillSummaryCard({ bill, onSave, cloudOnline, saveBlocked
                 </span>
                 <span className="text-[#059669]">SỐ TIỀN CẦN ĐÓNG</span>
               </div>
-              <ul className="max-h-[480px] divide-y divide-gray-100 overflow-y-auto pr-1">
+              <ul className="max-h-120 divide-y divide-gray-100 overflow-y-auto pr-1">
                 {bill.playerBreakdowns.map((p) => (
                   <li key={p.id} className="flex items-center justify-between py-2 text-sm">
                     <div className="flex items-center gap-1.5 min-w-0 pr-2">

@@ -106,5 +106,5 @@ src/
 Before finalizing any task or committing changes:
 
 - TypeScript check: `npx tsc --noEmit -p .`
-- Linting: `npx oxlint src`
-- Formatting: `npx oxfmt "src/**/*.{ts,tsx,json}" "*.json" ".*.json"`
+- Linting: `pnpm lint`
+- Formatting: `pnpm format`

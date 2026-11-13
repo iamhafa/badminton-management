@@ -93,7 +93,7 @@ export default function Header(props: HeaderProps) {
                 <Icon className="size-3.5 shrink-0" />
                 <span className="hidden sm:inline">{label}</span>
                 <span className="sm:hidden">{shortLabel}</span>
-                {tabCounts[key] !== undefined ? (
+                {tabCounts[key] && (
                   <span
                     className={cn(
                       'inline-flex items-center justify-center rounded-full px-1.5 py-0.2 text-[10px] font-bold',
@@ -102,7 +102,7 @@ export default function Header(props: HeaderProps) {
                   >
                     {tabCounts[key]}
                   </span>
-                ) : null}
+                )}
               </Link>
             );
           })}

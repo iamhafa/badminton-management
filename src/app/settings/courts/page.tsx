@@ -1,8 +1,8 @@
 'use client';
 
 import LoadingState from '@/components/common/LoadingState';
-import { CourtAddForm, CourtEditForm } from '@/components/features/settings/CourtForm';
-import type { CourtDraft } from '@/components/features/settings/schemas/court.schema';
+import { CourtAddForm, CourtEditForm } from './components/CourtForm';
+import type { CourtDraft } from './schemas/court.schema';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useMutateSaveCourt, useQueryCourts } from '@/hooks/useQueryCourts';
@@ -13,6 +13,7 @@ import type { TCourt } from '@/types/court.types';
 import type { TGroup } from '@/types/group.types';
 import { nowIso } from '@/utils/date';
 import { EyeOff, MapPin, Pencil } from 'lucide-react';
+import Link from 'next/link';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
@@ -36,7 +37,7 @@ export default function CourtsManager() {
   }
 
   function groupsUsing(courtId: string): TGroup[] {
-    return groups.filter((g) => !g.deletedAt && g.defaultCourtId === courtId);
+    return groups.filter((g) => g.defaultCourtId === courtId);
   }
 
   async function handleAdd(values: CourtDraft): Promise<string | null> {
@@ -125,8 +126,9 @@ export default function CourtsManager() {
           <p className="text-muted-foreground">Chưa có sân nào. Thêm sân đầu tiên ở ô phía trên.</p>
         ) : (
           <ul className="divide-y">
-            {courts.map((court) => {
-              const using = groupsUsing(court.id);
+            {courts.map((court: TCourt) => {
+              const using: TGroup[] = groupsUsing(court.id);
+
               return (
                 <li key={court.id} className="flex flex-wrap items-center gap-2 py-2 sm:flex-nowrap">
                   {editingId === court.id ? (
@@ -140,14 +142,25 @@ export default function CourtsManager() {
                     <>
                       <div className="min-w-0 flex-1">
                         <p className="truncate font-semibold">{court.name}</p>
-                        {court.address ?? (
+                        {court.address && (
                           <p className="flex items-center gap-1 text-xs text-muted-foreground">
                             <MapPin className="size-3 shrink-0" />
                             <span className="truncate">{court.address}</span>
                           </p>
                         )}
                         {using.length > 0 && (
-                          <p className="text-xs text-muted-foreground">Sân mặc định của {using.map((g) => g.name).join(', ')}</p>
+                          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
+                            <span>Sân mặc định của</span>
+                            {using.map((group: TGroup) => (
+                              <Link
+                                key={group.id}
+                                href={`/settings/groups/${group.id}`}
+                                className="font-semibold text-[#059669] underline hover:text-emerald-800"
+                              >
+                                {group.name}
+                              </Link>
+                            ))}
+                          </div>
                         )}
                       </div>
                       <Button

@@ -6,7 +6,7 @@ import type { Gender } from '@/types/player.types';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Plus } from 'lucide-react';
 import { useForm } from 'react-hook-form';
-import { guestFormSchema, type GuestDraft } from './schemas/guest.schema';
+import { guestFormSchema, type GuestDraft } from '../schemas/guest.schema';
 
 const EMPTY_GUEST: GuestDraft = { name: '', gender: 'MALE' };
 

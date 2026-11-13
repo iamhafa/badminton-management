@@ -1,9 +1,9 @@
 'use client';
 
 import LoadingState from '@/components/common/LoadingState';
-import GroupForm from '@/components/features/settings/GroupForm';
-import RosterManager from '@/components/features/settings/RosterManager';
-import type { GroupDraft } from '@/components/features/settings/schemas/group.schema';
+import GroupForm from '../components/GroupForm';
+import RosterManager from '../components/RosterManager';
+import type { GroupDraft } from '../schemas/group.schema';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useQueryCourts } from '@/hooks/useQueryCourts';
@@ -183,7 +183,7 @@ export default function GroupDetailPage() {
             </span>
             <span className="inline-flex items-start gap-1 text-gray-700">
               <MapPin className="size-3.5 shrink-0 text-gray-500 mt-0.5" />
-              <span className="break-words">{defaultCourt ?? 'Chưa chọn sân hay chơi'}</span>
+              <span className="wrap-break-word">{defaultCourt ?? 'Chưa chọn sân hay chơi'}</span>
             </span>
             <span className="inline-flex items-center gap-1 shrink-0 text-gray-500">{sessionCount} buổi đã lưu</span>
           </CardDescription>

@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Check, Plus, X } from 'lucide-react';
 import { useForm } from 'react-hook-form';
-import { courtFormSchema, type CourtDraft } from './schemas/court.schema';
+import { courtFormSchema, type CourtDraft } from '../schemas/court.schema';
 
 const EMPTY_COURT: CourtDraft = { name: '', address: '' };
 

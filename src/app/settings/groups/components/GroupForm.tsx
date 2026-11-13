@@ -12,7 +12,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { cn } from 'cn';
 import { useId } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { groupFormSchema, type GroupDraft } from './schemas/group.schema';
+import { groupFormSchema, type GroupDraft } from '../schemas/group.schema';
 
 interface GroupFormProps {
   initial: GroupDraft;

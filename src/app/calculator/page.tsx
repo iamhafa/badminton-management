@@ -1,10 +1,9 @@
 'use client';
 
 import LoadingState from '@/components/common/LoadingState';
-import BillSummaryCard from '@/components/features/calculator/BillSummaryCard';
-import { useCalculator } from '@/components/features/calculator/hooks/useCalculator';
-import ParticipantSelector from '@/components/features/calculator/ParticipantSelector';
-import SessionCostForm from '@/components/features/calculator/SessionCostForm';
+import BillSummaryCard from './components/BillSummaryCard';
+import ParticipantSelector from './components/ParticipantSelector';
+import SessionCostForm from './components/SessionCostForm';
 import { useQueryCourts } from '@/hooks/useQueryCourts';
 import { useQueryGroups } from '@/hooks/useQueryGroups';
 import { useMutateSaveSession } from '@/hooks/useQuerySessions';
@@ -18,6 +17,7 @@ import { useRouter } from 'next/navigation';
 import { useMemo } from 'react';
 import { toast } from 'sonner';
 import { useIsClient, useLocalStorage } from 'usehooks-ts';
+import { useCalculator } from './hooks/useCalculator';
 
 const SELECTED_GROUP_STORAGE_KEY = 'badminton:selectedGroupId';
 const SELECTED_GROUP_STORAGE_OPTIONS = {
@@ -62,6 +62,9 @@ export default function CalculatorPage() {
     updateGuest,
     removeGuest,
     bill,
+    reset,
+    waterEnabled,
+    setWaterEnabled,
   } = useCalculator(selectedGroup, courts, shuttlecocks);
 
   async function handleGroupChange(groupId: string): Promise<void> {
@@ -88,6 +91,7 @@ export default function CalculatorPage() {
     try {
       await saveSession(newBill);
       toast.success('Đã lưu buổi chơi vào Lịch sử (Firebase)');
+      reset();
     } catch (err) {
       toast.error(`Không thể lưu lên Cloud: ${err instanceof Error ? err.message : String(err)}`);
     }
@@ -99,7 +103,9 @@ export default function CalculatorPage() {
       ? 'Chọn sân chơi trước khi lưu'
       : !bill.shuttlecockId
         ? 'Chọn loại cầu trước khi lưu'
-        : undefined;
+        : waterEnabled && bill.waterFee <= 0
+          ? 'Nhập số tiền nước trước khi lưu'
+          : undefined;
 
   if (!hydrated || !input.isoDate) {
     return <LoadingState />;
@@ -116,6 +122,8 @@ export default function CalculatorPage() {
           courts={courts}
           shuttlecocks={shuttlecocks}
           onGroupChange={handleGroupChange}
+          waterEnabled={waterEnabled}
+          onWaterEnabledChange={setWaterEnabled}
         />
         <ParticipantSelector
           roster={roster}
@@ -123,7 +131,7 @@ export default function CalculatorPage() {
           selectedIds={selectedIds}
           noWaterIds={noWaterIds}
           onToggle={toggleMember}
-          onToggleWater={toggleWater}
+          onToggleWater={waterEnabled ? toggleWater : undefined}
           onSelectAll={selectAllMembers}
           onClearAll={clearAllMembers}
           guests={guests}

@@ -121,7 +121,7 @@ const DEFAULT_INPUT: Omit<TSessionInput, 'isoDate'> = {
   shuttleBrand: '',
   tubePrice: 0,
   shuttlesUsed: 5,
-  waterFee: 40000,
+  waterFee: 0,
   waterPayerId: '',
   femaleCap: 50000,
 };
@@ -138,6 +138,8 @@ export function useCalculator(group: TGroup | undefined, courts: TCourt[], shutt
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [guests, setGuests] = useState<TPlayer[]>([]);
   const [noWaterIds, setNoWaterIds] = useState<string[]>([]);
+  // Tiền nước là tùy chọn: tắt thì không tính tiền nước, ô nhập và nút "Nước" của từng người cũng ẩn.
+  const [waterEnabled, setWaterEnabled] = useState(false);
   const [appliedGroupId, setAppliedGroupId] = useState('');
   const [courtAppliedGroupId, setCourtAppliedGroupId] = useState('');
   const [shuttlecockInitialized, setShuttlecockInitialized] = useState(false);
@@ -194,6 +196,26 @@ export function useCalculator(group: TGroup | undefined, courts: TCourt[], shutt
     // oxlint-disable-next-line react/set-state-in-effect -- đồng bộ với đồng hồ hệ thống, chỉ chạy một lần sau khi mount
     setInput((prev) => (prev.isoDate ? prev : { ...prev, isoDate: todayIso() }));
   }, []);
+
+  /** Đưa màn hình về trạng thái ban đầu (VD: sau khi lưu buổi chơi), vẫn giữ nhóm đang chọn. */
+  const reset = useCallback(() => {
+    const defaultShuttle = shuttlecocks.find((s) => s.isDefault) ?? shuttlecocks[0];
+    const defaultCourtId = group && courts.some((v) => v.id === group.defaultCourtId) ? group.defaultCourtId : '';
+    setSelectedIds([]);
+    setGuests([]);
+    setNoWaterIds([]);
+    setWaterEnabled(false);
+    setInput({
+      ...DEFAULT_INPUT,
+      isoDate: todayIso(),
+      groupId: group?.id ?? '',
+      femaleCap: group?.femaleCap ?? DEFAULT_INPUT.femaleCap,
+      courtId: defaultCourtId,
+      shuttlecockId: defaultShuttle?.id ?? '',
+      shuttleBrand: defaultShuttle?.name ?? '',
+      tubePrice: defaultShuttle?.tubePrice ?? 0,
+    });
+  }, [group, courts, shuttlecocks]);
 
   const toggleMember = useCallback((id: string) => {
     setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
@@ -266,8 +288,16 @@ export function useCalculator(group: TGroup | undefined, courts: TCourt[], shutt
   // Người mua nước: giữ lựa chọn nếu người đó còn trong danh sách, ngược lại mặc định là Trưởng nhóm
   // hoặc người chơi đầu tiên. Tính ngay khi render nên không cần effect.
   const defaultPayerId = (participants.find((p) => p.role === 'LEADER') ?? participants[0])?.id ?? '';
-  const waterPayerId = participants.some((p) => p.id === input.waterPayerId) ? input.waterPayerId : defaultPayerId;
-  const effectiveInput = useMemo<TSessionInput>(() => ({ ...input, waterPayerId }), [input, waterPayerId]);
+  const waterPayerId = !waterEnabled
+    ? ''
+    : participants.some((p) => p.id === input.waterPayerId)
+      ? input.waterPayerId
+      : defaultPayerId;
+  // Tắt tiền nước: tiền nước bằng 0 (số đã nhập vẫn được giữ trong `input` để bật lại thì còn).
+  const effectiveInput = useMemo<TSessionInput>(
+    () => ({ ...input, waterFee: waterEnabled ? input.waterFee : 0, waterPayerId }),
+    [input, waterEnabled, waterPayerId],
+  );
 
   const courtName = courts.find((v) => v.id === input.courtId)?.name ?? '';
   const groupName = group?.name ?? '';
@@ -293,6 +323,9 @@ export function useCalculator(group: TGroup | undefined, courts: TCourt[], shutt
     participants,
     hasSelection,
     bill,
+    reset,
+    waterEnabled,
+    setWaterEnabled,
     toggleMember,
     selectAllMembers,
     clearAllMembers,
