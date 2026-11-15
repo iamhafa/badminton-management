@@ -128,8 +128,8 @@ const DEFAULT_INPUT: Omit<TSessionInput, 'isoDate'> = {
 
 /**
  * State của màn hình tính tiền cho 1 nhóm.
- * Khi đổi nhóm: xóa lựa chọn người chơi, điền lại mức trần nữ và sân mặc định của nhóm.
- * `courts` và `shuttlecocks` là các mục đang dùng (chưa ẩn).
+ * Khi đổi nhóm: xóa lựa chọn người chơi, điền lại mức trần nữ, sân mặc định và loại cầu mặc định của nhóm.
+ * Khi chưa chọn nhóm: không tự điền sân/cầu/thành viên.
  */
 export function useCalculator(group: TGroup | undefined, courts: TCourt[], shuttlecocks: TShuttlecock[]) {
   const roster = useMemo(() => group?.members ?? [], [group]);
@@ -142,13 +142,58 @@ export function useCalculator(group: TGroup | undefined, courts: TCourt[], shutt
   const [waterEnabled, setWaterEnabled] = useState(false);
   const [appliedGroupId, setAppliedGroupId] = useState('');
   const [courtAppliedGroupId, setCourtAppliedGroupId] = useState('');
-  const [shuttlecockInitialized, setShuttlecockInitialized] = useState(false);
 
-  // Tự động chọn loại cầu mặc định khi vào màn hình tính tiền
-  if (!shuttlecockInitialized && shuttlecocks.length > 0) {
-    setShuttlecockInitialized(true);
+  // Đổi hoặc chọn nhóm: điều chỉnh state ngay trong lúc render (tránh render thừa với useEffect).
+  if (group && group.id !== appliedGroupId) {
+    setAppliedGroupId(group.id);
+    setSelectedIds([]);
+    setGuests([]);
+    setNoWaterIds([]);
+
+    const defaultCourtId = courts.some((v) => v.id === group.defaultCourtId) ? group.defaultCourtId : '';
     const defaultShuttle = shuttlecocks.find((s) => s.isDefault) ?? shuttlecocks[0];
-    if (defaultShuttle && !input.shuttlecockId) {
+
+    setInput((prev) => ({
+      ...prev,
+      groupId: group.id,
+      femaleCap: group.femaleCap,
+      courtId: defaultCourtId,
+      shuttlecockId: defaultShuttle?.id ?? '',
+      shuttleBrand: defaultShuttle?.name ?? '',
+      tubePrice: defaultShuttle?.tubePrice ?? 0,
+      waterPayerId: '',
+    }));
+  } else if (!group && appliedGroupId !== '') {
+    // Khi bỏ chọn nhóm về rỗng
+    setAppliedGroupId('');
+    setSelectedIds([]);
+    setGuests([]);
+    setNoWaterIds([]);
+    setInput((prev) => ({
+      ...prev,
+      groupId: '',
+      femaleCap: DEFAULT_INPUT.femaleCap,
+      courtId: '',
+      shuttlecockId: '',
+      shuttleBrand: '',
+      tubePrice: 0,
+      waterPayerId: '',
+    }));
+  }
+
+  // Điền sân mặc định của nhóm nếu danh sách sân được tải xong sau khi chọn nhóm
+  if (group && courts.length > 0 && courtAppliedGroupId !== group.id) {
+    setCourtAppliedGroupId(group.id);
+    const defaultCourtId = courts.some((v) => v.id === group.defaultCourtId) ? group.defaultCourtId : '';
+    if (defaultCourtId && !input.courtId) {
+      setInput((prev) => ({ ...prev, courtId: defaultCourtId }));
+    }
+  }
+
+  // Điền cầu mặc định nếu danh sách cầu tải xong sau khi đã chọn nhóm và chưa có cầu
+  if (group && shuttlecocks.length > 0 && !input.shuttlecockId) {
+    const defaultShuttle = shuttlecocks.find((s) => s.isDefault) ?? shuttlecocks[0];
+    if (defaultShuttle) {
       setInput((prev) => ({
         ...prev,
         shuttlecockId: defaultShuttle.id,
@@ -156,29 +201,6 @@ export function useCalculator(group: TGroup | undefined, courts: TCourt[], shutt
         tubePrice: prev.tubePrice > 0 ? prev.tubePrice : defaultShuttle.tubePrice,
       }));
     }
-  }
-
-  // Đổi nhóm: điều chỉnh state ngay trong lúc render (tránh render thừa với useEffect).
-  if (group && group.id !== appliedGroupId) {
-    setAppliedGroupId(group.id);
-    setSelectedIds([]);
-    setGuests([]);
-    setNoWaterIds([]);
-    setInput((prev) => ({
-      ...prev,
-      groupId: group.id,
-      femaleCap: group.femaleCap,
-      courtId: '',
-      waterPayerId: '',
-    }));
-  }
-
-  // Điền sân mặc định của nhóm. Tách riêng khỏi bước đổi nhóm vì danh sách sân và nhóm được tải độc lập,
-  // nên sân có thể về sau nhóm; chỉ áp dụng khi đã có danh sách sân và chưa chọn sân nào.
-  if (group && courts.length > 0 && courtAppliedGroupId !== group.id) {
-    setCourtAppliedGroupId(group.id);
-    const defaultCourtId = courts.some((v) => v.id === group.defaultCourtId) ? group.defaultCourtId : '';
-    setInput((prev) => ({ ...prev, courtId: prev.courtId || defaultCourtId }));
   }
 
   // Sân đang chọn bị ẩn: bỏ chọn để bắt buộc chọn lại.
@@ -211,9 +233,9 @@ export function useCalculator(group: TGroup | undefined, courts: TCourt[], shutt
       groupId: group?.id ?? '',
       femaleCap: group?.femaleCap ?? DEFAULT_INPUT.femaleCap,
       courtId: defaultCourtId,
-      shuttlecockId: defaultShuttle?.id ?? '',
-      shuttleBrand: defaultShuttle?.name ?? '',
-      tubePrice: defaultShuttle?.tubePrice ?? 0,
+      shuttlecockId: group ? (defaultShuttle?.id ?? '') : '',
+      shuttleBrand: group ? (defaultShuttle?.name ?? '') : '',
+      tubePrice: group ? (defaultShuttle?.tubePrice ?? 0) : 0,
     });
   }, [group, courts, shuttlecocks]);
 

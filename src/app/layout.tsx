@@ -1,7 +1,6 @@
 import ConfirmDialog from '@/components/common/ConfirmDialog';
-import ConnectionWatcher from '@/components/layout/ConnectionWatcher';
-import Header from '@/components/layout/Header';
-import QueryProvider from '@/components/layout/QueryProvider';
+import HeaderLayout from '@/components/layout/HeaderLayout';
+import QueryProvider from '@/components/provider/QueryProvider';
 import { Toaster } from '@/components/ui/sonner';
 import '@/styles/globals.css';
 import { cn } from 'cn';
@@ -18,6 +17,7 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: 'CLB Cầu Lông - Quản lý chi phí',
   description: 'Tính tiền sân, cầu, nước và quản lý thành viên CLB cầu lông',
+  authors: [{ name: 'Nguyễn Cao Sang' }],
   icons: {
     icon: '/badminton-icon.png',
     apple: '/badminton-icon.png',
@@ -30,11 +30,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body className="min-h-full flex flex-col">
         <QueryProvider>
           <div className="flex min-h-full flex-1 flex-col gap-0 bg-[#f0f4f8]">
-            <Header />
+            <HeaderLayout />
             <main className="mx-auto w-full max-w-6xl flex-1 px-3 py-3.5 sm:px-4 sm:py-6">{children}</main>
           </div>
         </QueryProvider>
-        <ConnectionWatcher />
         <ConfirmDialog />
         {/* App đang dùng giao diện sáng nên cố định theme="light" cho thông báo. */}
         <Toaster theme="dark" position="bottom-center" richColors closeButton />

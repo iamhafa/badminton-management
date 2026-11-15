@@ -15,9 +15,10 @@ import { formatVND, SHUTTLES_PER_TUBE } from '@/utils/format';
 import { cn } from 'cn';
 import { CalendarDays, Droplet, Feather, Grid2X2, MapPin, Minus, Plus, RotateCcw, UsersRound, Venus } from 'lucide-react';
 import Link from 'next/link';
+import { ChangeEvent } from 'react';
 
-const COURT_FEE_PRESETS = [240000, 280000, 300000, 360000];
-const WATER_FEE_PRESETS = [35000, 40000, 50000];
+const COURT_FEE_PRESETS: number[] = [240000, 280000, 300000, 360000];
+const WATER_FEE_PRESETS: number[] = [35000, 40000, 50000];
 
 // Giá trị mẫu khi bấm "Khôi phục mẫu ví dụ".
 // Giữ nguyên nhóm, sân, loại cầu và ngày chơi; mức trần nữ và giá ống lấy theo nhóm / loại cầu đang chọn.
@@ -110,35 +111,49 @@ export default function SessionCostForm({
         {/* Nhóm */}
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="session-group" className="text-[11px] font-bold uppercase tracking-wider text-gray-500">
-            NHÓM
+            Nhóm <span className="text-red-500">*</span>
           </Label>
           <div className="relative">
             <UsersRound className="pointer-events-none absolute left-3 top-1/2 z-10 size-4 -translate-y-1/2 text-gray-400" />
             <NativeSelect
               id="session-group"
               value={input.groupId}
-              onChange={(e) => onGroupChange(e.target.value)}
+              onChange={(e: ChangeEvent<HTMLSelectElement>) => onGroupChange(e.target.value)}
               disabled={groups.length === 0}
-              className="w-full [&_select]:h-10 [&_select]:pl-9 [&_select]:bg-white [&_select]:border-gray-200 [&_select]:rounded-lg [&_select]:font-semibold"
+              aria-required="true"
+              aria-invalid={!input.groupId}
+              className={cn(
+                'w-full [&_select]:h-10 [&_select]:pl-9 [&_select]:bg-white [&_select]:rounded-lg [&_select]:font-semibold',
+                input.groupId
+                  ? '[&_select]:border-gray-200'
+                  : '[&_select]:border-emerald-500 [&_select]:ring-2 [&_select]:ring-emerald-100',
+              )}
             >
               {groups.length === 0 ? (
                 <NativeSelectOption value="">Chưa có nhóm nào</NativeSelectOption>
               ) : (
-                groups.map((g) => (
-                  <NativeSelectOption key={g.id} value={g.id}>
-                    {g.name}
-                  </NativeSelectOption>
-                ))
+                <>
+                  <NativeSelectOption value="">-- Chọn nhóm để bắt đầu --</NativeSelectOption>
+                  {groups.map((group: TGroup) => (
+                    <NativeSelectOption key={group.id} value={group.id}>
+                      {group.name}
+                    </NativeSelectOption>
+                  ))}
+                </>
               )}
             </NativeSelect>
           </div>
-          {groups.length === 0 && (
+          {groups.length === 0 ? (
             <p className="text-[11px] text-gray-500">
               <Link href="/settings/groups" className="font-semibold text-[#059669] underline">
                 Tạo nhóm
               </Link>{' '}
               ở Cài đặt để bắt đầu tính tiền.
             </p>
+          ) : (
+            !input.groupId && (
+              <p className="text-[11px] font-semibold text-emerald-600">Chọn nhóm trước tiên để tải thông tin buổi chơi.</p>
+            )
           )}
         </div>
 
@@ -152,18 +167,25 @@ export default function SessionCostForm({
             <NativeSelect
               id="session-court"
               value={input.courtId}
-              onChange={(e) => onChange({ courtId: e.target.value })}
+              onChange={(e: ChangeEvent<HTMLSelectElement>) => onChange({ courtId: e.target.value })}
+              disabled={!input.groupId || courts.length === 0}
               aria-required="true"
               aria-invalid={!input.courtId}
               className={cn(
                 'w-full [&_select]:h-10 [&_select]:pl-9 [&_select]:bg-white [&_select]:rounded-lg [&_select]:font-semibold',
-                input.courtId ? '[&_select]:border-gray-200' : '[&_select]:border-amber-300',
+                !input.groupId
+                  ? '[&_select]:bg-gray-50 [&_select]:border-gray-200 [&_select]:text-gray-400'
+                  : input.courtId
+                    ? '[&_select]:border-gray-200'
+                    : '[&_select]:border-amber-300',
               )}
             >
-              <NativeSelectOption value="">-- Chọn sân --</NativeSelectOption>
-              {courts.map((v) => (
-                <NativeSelectOption key={v.id} value={v.id}>
-                  {v.name}
+              <NativeSelectOption value="">
+                {!input.groupId ? '-- Vui lòng chọn nhóm trước --' : '-- Chọn sân --'}
+              </NativeSelectOption>
+              {courts.map((court: TCourt) => (
+                <NativeSelectOption key={court.id} value={court.id}>
+                  {court.name}
                 </NativeSelectOption>
               ))}
             </NativeSelect>
@@ -177,7 +199,7 @@ export default function SessionCostForm({
               ở Cài đặt.
             </p>
           ) : (
-            !input.courtId && <p className="text-[11px] text-amber-600">Bắt buộc chọn sân để lưu buổi chơi.</p>
+            input.groupId && !input.courtId && <p className="text-[11px] text-amber-600">Bắt buộc chọn sân để lưu buổi chơi.</p>
           )}
         </div>
       </div>
@@ -186,14 +208,14 @@ export default function SessionCostForm({
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {/* Ngày chơi */}
         <div className="flex flex-col gap-1.5">
-          <Label className="text-[11px] font-bold uppercase tracking-wider text-gray-500">NGÀY CHƠI</Label>
+          <Label className="text-[11px] font-bold uppercase tracking-wider text-gray-500">Ngày chơi</Label>
           <div className="flex items-stretch gap-2">
             <div className="relative flex-1">
               <CalendarDays className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-gray-400" />
               <Input
                 type="date"
                 value={input.isoDate}
-                onChange={(e) => e.target.value && onChange({ isoDate: e.target.value })}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => e.target.value && onChange({ isoDate: e.target.value })}
                 className="pl-9 h-10 min-h-10 w-full appearance-none [-webkit-appearance:none] scheme-light font-semibold text-gray-800 rounded-lg border-gray-200"
               />
             </div>
@@ -207,7 +229,7 @@ export default function SessionCostForm({
 
         {/* Số giờ chơi */}
         <div className="flex flex-col gap-1.5">
-          <Label className="text-[11px] font-bold uppercase tracking-wider text-gray-500">SỐ GIỜ CHƠI</Label>
+          <Label className="text-[11px] font-bold uppercase tracking-wider text-gray-500">Số giờ chơi</Label>
           <div className="flex h-10 items-center overflow-hidden rounded-lg border border-gray-200 bg-white">
             <button
               type="button"
@@ -240,7 +262,7 @@ export default function SessionCostForm({
             <Grid2X2 className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-gray-400" />
             <MoneyInput
               value={input.courtFee}
-              onChange={(courtFee) => onChange({ courtFee })}
+              onChange={(courtFee: number) => onChange({ courtFee })}
               className="pl-9 pr-12 h-10 font-bold text-gray-900 rounded-lg border-gray-200"
             />
             <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-gray-400">
@@ -248,7 +270,7 @@ export default function SessionCostForm({
             </span>
           </div>
           <div className="flex flex-wrap gap-1.5 mt-0.5">
-            {COURT_FEE_PRESETS.map((preset) => (
+            {COURT_FEE_PRESETS.map((preset: number) => (
               <button
                 key={preset}
                 type="button"
@@ -271,8 +293,8 @@ export default function SessionCostForm({
           <Label className="text-[11px] font-bold uppercase tracking-wider text-[#db2777]">Mức trần ưu tiên nữ (tối đa)</Label>
           <div className="flex h-10 items-center gap-2 rounded-lg border border-pink-200 bg-pink-50/40 px-3">
             <Venus className="size-4 shrink-0 text-[#ec4899]" />
-            <span className="flex-1 font-bold text-[#be185d]">{formatVND(input.femaleCap)}</span>
-            <span className="text-xs font-bold text-[#ec4899]">VNĐ/nữ</span>
+            <span className="flex-1 font-bold">{input.groupId ? formatVND(input.femaleCap) : 'Chưa chọn nhóm'}</span>
+            {input.groupId && <span className="text-xs font-bold text-[#ec4899]">VNĐ/nữ</span>}
           </div>
           <div className="flex flex-wrap items-center justify-between gap-1.5 mt-0.5">
             <span className="text-[10px] sm:text-[11px] text-gray-400 italic">
@@ -294,7 +316,7 @@ export default function SessionCostForm({
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <div className="flex items-center gap-1.5 text-xs font-bold text-[#b45309] uppercase tracking-wide">
             <Feather className="size-4 text-[#d97706] shrink-0" />
-            <span>CHI PHÍ CẦU LÔNG ({SHUTTLES_PER_TUBE} QUẢ / ỐNG)</span>
+            <span className="uppercase">Chi phí cầu lông</span>
           </div>
         </div>
 
@@ -307,19 +329,26 @@ export default function SessionCostForm({
             <NativeSelect
               id="session-shuttlecock"
               value={input.shuttlecockId}
-              onChange={(e) => handleShuttlecockChange(e.target.value)}
+              onChange={(e: ChangeEvent<HTMLSelectElement>) => handleShuttlecockChange(e.target.value)}
+              disabled={!input.groupId || shuttlecocks.length === 0}
               aria-required="true"
               aria-invalid={!input.shuttlecockId}
               className={cn(
                 'w-full [&_select]:h-9 [&_select]:bg-white [&_select]:rounded-md [&_select]:font-medium',
-                input.shuttlecockId ? '[&_select]:border-gray-200' : '[&_select]:border-amber-300',
+                !input.groupId
+                  ? '[&_select]:bg-gray-50 [&_select]:border-gray-200 [&_select]:text-gray-400'
+                  : input.shuttlecockId
+                    ? '[&_select]:border-gray-200'
+                    : '[&_select]:border-amber-300',
               )}
             >
-              <NativeSelectOption value="">-- Chọn loại cầu --</NativeSelectOption>
-              {shuttlecocks.map((s) => (
-                <NativeSelectOption key={s.id} value={s.id}>
-                  {s.name}
-                  {s.isDefault ? ' (Mặc định)' : ''}
+              <NativeSelectOption value="">
+                {!input.groupId ? '-- Vui lòng chọn nhóm trước --' : '-- Chọn loại cầu --'}
+              </NativeSelectOption>
+              {shuttlecocks.map((shuttlecock: TShuttlecock) => (
+                <NativeSelectOption key={shuttlecock.id} value={shuttlecock.id}>
+                  {shuttlecock.name}
+                  {shuttlecock.isDefault ? ' (Mặc định)' : ''}
                 </NativeSelectOption>
               ))}
             </NativeSelect>
@@ -342,7 +371,7 @@ export default function SessionCostForm({
             <div className="relative">
               <MoneyInput
                 value={input.tubePrice}
-                onChange={(tubePrice) => onChange({ tubePrice })}
+                onChange={(tubePrice: number) => onChange({ tubePrice })}
                 className="h-9 bg-white border-gray-200 pr-12 font-semibold text-gray-900"
               />
               <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-gray-400">đ/ống</span>
@@ -387,13 +416,13 @@ export default function SessionCostForm({
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5 text-xs font-bold text-[#1d4ed8] uppercase tracking-wide">
             <Droplet className="size-4 text-[#2563eb] shrink-0" />
-            <span>CHI PHÍ NƯỚC LỌC</span>
+            <span className="uppercase">Chi phí nước lọc</span>
           </div>
           <label className="flex cursor-pointer items-center gap-2 text-xs font-semibold text-gray-500">
             Tính tiền nước lọc
             <Switch
               checked={waterEnabled}
-              onCheckedChange={(checked) => onWaterEnabledChange(checked === true)}
+              onCheckedChange={(checked: boolean) => onWaterEnabledChange(checked === true)}
               className="data-checked:bg-[#2563eb]"
             />
           </label>
@@ -411,7 +440,7 @@ export default function SessionCostForm({
                 <div className="relative">
                   <MoneyInput
                     value={input.waterFee}
-                    onChange={(waterFee) => onChange({ waterFee })}
+                    onChange={(waterFee: number) => onChange({ waterFee })}
                     aria-invalid={input.waterFee === 0 || undefined}
                     className={cn(
                       'h-10 bg-white pr-12 font-bold text-gray-900 rounded-lg',
@@ -423,7 +452,7 @@ export default function SessionCostForm({
                   </span>
                 </div>
                 <div className="flex flex-wrap gap-1.5 mt-0.5">
-                  {WATER_FEE_PRESETS.map((preset) => (
+                  {WATER_FEE_PRESETS.map((preset: number) => (
                     <button
                       key={preset}
                       type="button"
@@ -452,18 +481,18 @@ export default function SessionCostForm({
                   {participants.length === 0 ? (
                     <NativeSelectOption value="">Chưa có người chơi nào được chọn</NativeSelectOption>
                   ) : (
-                    participants.map((p) => {
+                    participants.map((participant: TPlayer) => {
                       const roleTag =
-                        p.role === 'LEADER'
+                        participant.role === 'LEADER'
                           ? ' (Trưởng nhóm)'
-                          : p.role === 'VICE_LEADER'
+                          : participant.role === 'VICE_LEADER'
                             ? ' (Phó nhóm)'
-                            : p.type === 'GUEST'
+                            : participant.type === 'GUEST'
                               ? ' (Vãng lai)'
                               : '';
                       return (
-                        <NativeSelectOption key={p.id} value={p.id}>
-                          {p.name}
+                        <NativeSelectOption key={participant.id} value={participant.id}>
+                          {participant.name}
                           {roleTag}
                         </NativeSelectOption>
                       );
@@ -483,8 +512,8 @@ export default function SessionCostForm({
                 <span className="font-bold text-blue-700">
                   ~
                   {formatVND(
-                    participants.filter((p) => p.drinksWater !== false).length > 0
-                      ? input.waterFee / participants.filter((p) => p.drinksWater !== false).length
+                    participants.filter((participant) => participant.drinksWater !== false).length > 0
+                      ? input.waterFee / participants.filter((participant) => participant.drinksWater !== false).length
                       : 0,
                   )}
                   /người

@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import type { Gender, TPlayer } from '@/types/player.types';
 import { cn } from 'cn';
 import { Edit3, GlassWater, Mars, Megaphone, UserPlus, Users, Venus, X } from 'lucide-react';
+import { useMemo } from 'react';
 import GuestForm from './GuestForm';
 
 export { GenderTag };
@@ -13,10 +14,14 @@ export { GenderTag };
 const NO_IDS: string[] = [];
 
 interface ParticipantSelectorProps {
+  groupId?: string;
   roster: TPlayer[];
   rosterLoading: boolean;
   selectedIds: string[];
   noWaterIds?: string[];
+  totalCount: number;
+  maleCount: number;
+  femaleCount: number;
   onToggle: (id: string) => void;
   onToggleWater?: (id: string) => void;
   onSelectAll: () => void;
@@ -30,10 +35,14 @@ interface ParticipantSelectorProps {
 }
 
 export default function ParticipantSelector({
+  groupId,
   roster,
   rosterLoading,
   selectedIds,
   noWaterIds = NO_IDS,
+  totalCount,
+  maleCount,
+  femaleCount,
   onToggle,
   onToggleWater,
   onSelectAll,
@@ -45,22 +54,7 @@ export default function ParticipantSelector({
   onRemoveGuest,
   onNavigateRoster,
 }: ParticipantSelectorProps) {
-  const selected = new Set(selectedIds);
-
-  let maleCount = 0;
-  let femaleCount = 0;
-  for (let i = 0; i < roster.length; i++) {
-    const m = roster[i];
-    if (selected.has(m.id)) {
-      if (m.gender === 'MALE') maleCount++;
-      else femaleCount++;
-    }
-  }
-  for (let i = 0; i < guests.length; i++) {
-    if (guests[i].gender === 'MALE') maleCount++;
-    else femaleCount++;
-  }
-  const totalCount = maleCount + femaleCount;
+  const selected = useMemo(() => new Set(selectedIds), [selectedIds]);
 
   return (
     <div className="rounded-2xl bg-white p-3.5 sm:p-6 shadow-sm border border-gray-100 flex flex-col gap-4 sm:gap-5">
@@ -72,7 +66,7 @@ export default function ParticipantSelector({
           </span>
           <div>
             <h2 className="text-base font-bold text-gray-900 tracking-tight">Danh sách người chơi hôm nay</h2>
-            <p className="text-xs text-gray-500">Tick chọn thành viên cố định đi đánh và thêm người chơi vãng lai (nếu có)</p>
+            <p className="text-xs text-gray-500">Chọn thành viên cố định đi đánh và thêm người chơi vãng lai (nếu có)</p>
           </div>
         </div>
 
@@ -101,7 +95,7 @@ export default function ParticipantSelector({
               </button>
             )}
           </div>
-          {roster.length > 0 ? (
+          {groupId && roster.length > 0 ? (
             <div className="flex items-center gap-2 text-xs text-gray-600 font-medium">
               <button type="button" onClick={onSelectAll} className="hover:text-emerald-700 transition-colors">
                 Chọn tất cả
@@ -114,7 +108,17 @@ export default function ParticipantSelector({
           ) : null}
         </div>
 
-        {rosterLoading ? (
+        {!groupId ? (
+          <div className="flex flex-col items-center justify-center py-8 px-4 text-center gap-2 rounded-xl border border-dashed border-gray-200 bg-gray-50/60">
+            <div className="flex size-10 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
+              <Users className="size-5" />
+            </div>
+            <p className="text-sm font-semibold text-gray-800">Chưa chọn nhóm</p>
+            <p className="text-xs text-gray-500 max-w-sm">
+              Vui lòng chọn nhóm ở <strong>Bước 1</strong> để tải danh sách thành viên của nhóm.
+            </p>
+          </div>
+        ) : rosterLoading ? (
           <p className="py-4 text-center text-xs text-gray-400">Đang tải danh sách thành viên...</p>
         ) : roster.length === 0 ? (
           <p className="py-4 text-center text-xs text-gray-400">
@@ -223,7 +227,7 @@ export default function ParticipantSelector({
           Vãng lai được tính phí theo giới tính (Nam hoặc Nữ) giống hệt thành viên cố định
         </p>
 
-        <GuestForm onAdd={onAddGuest} />
+        <GuestForm onAdd={onAddGuest} disabled={!groupId} />
 
         {/* Guest List Chips */}
         {guests.length > 0 ? (

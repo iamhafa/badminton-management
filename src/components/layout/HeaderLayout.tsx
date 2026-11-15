@@ -22,7 +22,7 @@ interface HeaderProps {
   historyCount?: number;
 }
 
-export default function Header(props: HeaderProps) {
+export default function HeaderLayout(props: HeaderProps) {
   const pathname: string = usePathname();
   const storeStatus: CloudStatus = useConnectionStore((state: ConnectionState) => state.cloudStatus);
   const storeRetry: VoidFunction = useConnectionStore((state: ConnectionState) => state.retryConnection);

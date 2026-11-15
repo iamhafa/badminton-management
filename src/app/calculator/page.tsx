@@ -1,35 +1,28 @@
 'use client';
 
 import LoadingState from '@/components/common/LoadingState';
-import BillSummaryCard from './components/BillSummaryCard';
-import ParticipantSelector from './components/ParticipantSelector';
-import SessionCostForm from './components/SessionCostForm';
 import { useQueryCourts } from '@/hooks/useQueryCourts';
 import { useQueryGroups } from '@/hooks/useQueryGroups';
 import { useMutateSaveSession } from '@/hooks/useQuerySessions';
 import { useQueryShuttlecocks } from '@/hooks/useQueryShuttlecocks';
 import { confirm } from '@/stores/confirm.store';
-import { useConnectionStore } from '@/stores/connection.store';
-import { TGroup } from '@/types/group.types';
+import { ConnectionState, useConnectionStore } from '@/stores/connection.store';
+import type { TGroup } from '@/types/group.types';
 import type { TSessionBill, TSessionInput } from '@/types/session.types';
 import { nowIso } from '@/utils/date';
 import { useRouter } from 'next/navigation';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { useIsClient, useLocalStorage } from 'usehooks-ts';
+import { useIsClient } from 'usehooks-ts';
+import BillSummaryCard from './components/BillSummaryCard';
+import ParticipantSelector from './components/ParticipantSelector';
+import SessionCostForm from './components/SessionCostForm';
 import { useCalculator } from './hooks/useCalculator';
 
-const SELECTED_GROUP_STORAGE_KEY = 'badminton:selectedGroupId';
-const SELECTED_GROUP_STORAGE_OPTIONS = {
-  serializer: (value: string) => value,
-  deserializer: (value: string) => value,
-  initializeWithValue: false,
-};
-
 export default function CalculatorPage() {
-  const hydrated: boolean = useIsClient();
   const router = useRouter();
-  const cloudOnline: boolean = useConnectionStore((s) => s.cloudStatus === 'online');
+  const hydrated: boolean = useIsClient();
+  const cloudOnline: boolean = useConnectionStore((state: ConnectionState) => state.cloudStatus === 'online');
 
   const { data: groups, isPending: loadingGroups } = useQueryGroups();
   const { data: courts, isPending: loadingCourts } = useQueryCourts();
@@ -37,11 +30,11 @@ export default function CalculatorPage() {
   const { mutateAsync: saveSession } = useMutateSaveSession();
   const loading: boolean = loadingGroups || loadingCourts || loadingShuttlecocks;
 
-  const [preferredGroupId, selectGroup] = useLocalStorage<string>(SELECTED_GROUP_STORAGE_KEY, '', SELECTED_GROUP_STORAGE_OPTIONS);
+  const [selectedGroupId, setSelectedGroupId] = useState<string>('');
 
-  const selectedGroup: TGroup = useMemo(
-    () => groups.find((g) => g.id === preferredGroupId) ?? groups[0],
-    [groups, preferredGroupId],
+  const selectedGroup: TGroup | undefined = useMemo(
+    () => groups.find((group: TGroup) => group.id === selectedGroupId),
+    [groups, selectedGroupId],
   );
 
   const {
@@ -68,9 +61,9 @@ export default function CalculatorPage() {
   } = useCalculator(selectedGroup, courts, shuttlecocks);
 
   async function handleGroupChange(groupId: string): Promise<void> {
-    if (groupId === selectedGroup?.id) return;
+    if (groupId === selectedGroupId) return;
     if (hasSelection) {
-      const nextName = groups.find((g) => g.id === groupId)?.name ?? '';
+      const nextName = groups.find((g) => g.id === groupId)?.name ?? 'Bỏ chọn nhóm';
       const ok = await confirm({
         title: `Chuyển sang nhóm "${nextName}"?`,
         description: 'Danh sách người chơi và vãng lai đã chọn của nhóm hiện tại sẽ bị xóa.',
@@ -78,11 +71,11 @@ export default function CalculatorPage() {
       });
       if (!ok) return;
     }
-    selectGroup(groupId);
+    setSelectedGroupId(groupId);
   }
 
   async function handleSaveSession(draft: TSessionBill): Promise<void> {
-    const tempId = `local_${crypto.randomUUID()}`;
+    const tempId: string = crypto.randomUUID();
     const newBill: TSessionBill = { ...draft, id: tempId, createdAt: draft.createdAt || nowIso() };
     if (!cloudOnline) {
       toast.info('Chưa kết nối Cloud nên chưa lưu được lên Firebase.');
@@ -126,10 +119,14 @@ export default function CalculatorPage() {
           onWaterEnabledChange={setWaterEnabled}
         />
         <ParticipantSelector
+          groupId={input.groupId}
           roster={roster}
           rosterLoading={loading}
           selectedIds={selectedIds}
           noWaterIds={noWaterIds}
+          totalCount={bill.totalCount}
+          maleCount={bill.maleCount}
+          femaleCount={bill.femaleCount}
           onToggle={toggleMember}
           onToggleWater={waterEnabled ? toggleWater : undefined}
           onSelectAll={selectAllMembers}
@@ -139,7 +136,9 @@ export default function CalculatorPage() {
           onToggleGuestSource={toggleGuestSource}
           onUpdateGuest={updateGuest}
           onRemoveGuest={removeGuest}
-          onNavigateRoster={() => selectedGroup && router.push(`/settings/groups/${selectedGroup.id}`)}
+          onNavigateRoster={() =>
+            selectedGroupId ? router.push(`/settings/groups/${selectedGroupId}`) : router.push('/settings/groups')
+          }
         />
       </div>
       <div>
