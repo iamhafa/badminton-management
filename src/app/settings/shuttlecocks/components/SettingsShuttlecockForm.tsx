@@ -12,7 +12,7 @@ import { shuttlecockFormSchema, type ShuttlecockDraft } from '../schemas/shuttle
 const EMPTY_SHUTTLECOCK: ShuttlecockDraft = { name: '', tubePrice: 0 };
 
 /** Trả về thông báo lỗi (VD: trùng tên) để hiện dưới ô tên, hoặc null nếu lưu thành công. */
-export type ShuttlecockSubmit = (values: ShuttlecockDraft) => Promise<string | null>;
+export type SettingsShuttlecockSubmit = (values: ShuttlecockDraft) => Promise<string | null>;
 
 /** Ô giá 1 ống mặc định, có hậu tố "đ/ống". */
 function TubePriceField({
@@ -45,7 +45,7 @@ function TubePriceField({
 }
 
 /** Form thêm loại cầu mới (nằm phía trên danh sách). */
-export function ShuttlecockAddForm({ disabled, onSubmit }: { disabled: boolean; onSubmit: ShuttlecockSubmit }) {
+export function SettingsShuttlecockAddForm({ disabled, onSubmit }: { disabled: boolean; onSubmit: SettingsShuttlecockSubmit }) {
   const {
     register,
     control,
@@ -86,7 +86,7 @@ export function ShuttlecockAddForm({ disabled, onSubmit }: { disabled: boolean; 
 }
 
 /** Form sửa trực tiếp trên một dòng của danh sách. Enter để lưu, Escape để hủy. */
-export function ShuttlecockEditForm({
+export function SettingsShuttlecockEditForm({
   initial,
   disabled,
   onSubmit,
@@ -94,7 +94,7 @@ export function ShuttlecockEditForm({
 }: {
   initial: ShuttlecockDraft;
   disabled: boolean;
-  onSubmit: ShuttlecockSubmit;
+  onSubmit: SettingsShuttlecockSubmit;
   onCancel: () => void;
 }) {
   const {

@@ -13,7 +13,7 @@ import { memberFormSchema, type MemberDraft } from '../schemas/member.schema';
 const EMPTY_MEMBER: MemberDraft = { name: '', gender: 'MALE', role: '' };
 
 /** Trả về thông báo lỗi (VD: trùng tên, lưu thất bại) để hiện dưới ô tên, hoặc null nếu thành công. */
-export type MemberSubmit = (values: MemberDraft) => Promise<string | null>;
+export type SettingsGroupMemberSubmit = (values: MemberDraft) => Promise<string | null>;
 
 function GenderSelect({ register }: { register: UseFormRegister<MemberDraft> }) {
   return (
@@ -25,7 +25,7 @@ function GenderSelect({ register }: { register: UseFormRegister<MemberDraft> }) 
 }
 
 /** Form thêm thành viên mới (nằm phía trên danh sách). Giới tính được giữ lại sau khi thêm. */
-export function MemberAddForm({ disabled, onSubmit }: { disabled: boolean; onSubmit: MemberSubmit }) {
+export function SettingsGroupMemberAddForm({ disabled, onSubmit }: { disabled: boolean; onSubmit: SettingsGroupMemberSubmit }) {
   const {
     register,
     handleSubmit,
@@ -67,7 +67,7 @@ export function MemberAddForm({ disabled, onSubmit }: { disabled: boolean; onSub
 }
 
 /** Form sửa trực tiếp trên một dòng của danh sách (tên, giới tính, vai trò). Enter để lưu, Escape để hủy. */
-export function MemberEditForm({
+export function SettingsGroupMemberEditForm({
   initial,
   disabled,
   onSubmit,
@@ -75,7 +75,7 @@ export function MemberEditForm({
 }: {
   initial: MemberDraft;
   disabled: boolean;
-  onSubmit: MemberSubmit;
+  onSubmit: SettingsGroupMemberSubmit;
   onCancel: () => void;
 }) {
   const {

@@ -14,9 +14,9 @@ import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { useIsClient } from 'usehooks-ts';
-import BillSummaryCard from './components/BillSummaryCard';
-import ParticipantSelector from './components/ParticipantSelector';
-import SessionCostForm from './components/SessionCostForm';
+import CalculatorBillSummaryCard from './components/CalculatorBillSummaryCard';
+import CalculatorParticipantSelector from './components/CalculatorParticipantSelector';
+import CalculatorSessionCostForm from './components/CalculatorSessionCostForm';
 import { useCalculator } from './hooks/useCalculator';
 
 export default function CalculatorPage() {
@@ -90,7 +90,7 @@ export default function CalculatorPage() {
     }
   }
 
-  const saveBlockedReason = !bill.groupId
+  const saveBlockedReason: string = !bill.groupId
     ? 'Chưa chọn nhóm'
     : !bill.courtId
       ? 'Chọn sân chơi trước khi lưu'
@@ -98,7 +98,7 @@ export default function CalculatorPage() {
         ? 'Chọn loại cầu trước khi lưu'
         : waterEnabled && bill.waterFee <= 0
           ? 'Nhập số tiền nước trước khi lưu'
-          : undefined;
+          : '';
 
   if (!hydrated || !input.isoDate) {
     return <LoadingState />;
@@ -107,7 +107,7 @@ export default function CalculatorPage() {
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_380px]">
       <div className="flex flex-col gap-4">
-        <SessionCostForm
+        <CalculatorSessionCostForm
           input={input}
           onChange={(patch) => setInput((prev: TSessionInput) => ({ ...prev, ...patch }))}
           participants={participants}
@@ -118,7 +118,7 @@ export default function CalculatorPage() {
           waterEnabled={waterEnabled}
           onWaterEnabledChange={setWaterEnabled}
         />
-        <ParticipantSelector
+        <CalculatorParticipantSelector
           groupId={input.groupId}
           roster={roster}
           rosterLoading={loading}
@@ -142,7 +142,7 @@ export default function CalculatorPage() {
         />
       </div>
       <div>
-        <BillSummaryCard
+        <CalculatorBillSummaryCard
           bill={bill}
           onSave={() => handleSaveSession(bill)}
           cloudOnline={cloudOnline}

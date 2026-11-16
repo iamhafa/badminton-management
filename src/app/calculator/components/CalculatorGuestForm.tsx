@@ -10,13 +10,13 @@ import { guestFormSchema, type GuestDraft } from '../schemas/guest.schema';
 
 const EMPTY_GUEST: GuestDraft = { name: '', gender: 'MALE' };
 
-interface GuestFormProps {
+interface CalculatorGuestFormProps {
   onAdd: (name: string, gender: Gender) => void;
   disabled?: boolean;
 }
 
 /** Form thêm người chơi vãng lai: bắt buộc nhập tên. Giới tính được giữ lại sau khi thêm. */
-export default function GuestForm({ onAdd, disabled }: GuestFormProps) {
+export default function CalculatorGuestForm({ onAdd, disabled }: CalculatorGuestFormProps) {
   const {
     control,
     handleSubmit,

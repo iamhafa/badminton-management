@@ -10,9 +10,9 @@ import { LoaderCircle, Pencil, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { useBoolean } from 'usehooks-ts';
 import type { MemberDraft } from '../schemas/member.schema';
-import { MemberAddForm, MemberEditForm } from './MemberForm';
+import { SettingsGroupMemberAddForm, SettingsGroupMemberEditForm } from './SettingsGroupMemberForm';
 
-interface RosterManagerProps {
+interface SettingsGroupRosterManagerProps {
   title?: string;
   roster: TPlayer[];
   loading: boolean;
@@ -21,13 +21,13 @@ interface RosterManagerProps {
   onSave: (members: TPlayer[]) => Promise<void>;
 }
 
-export default function RosterManager({
+export default function SettingsGroupRosterManager({
   title = 'Thành viên cố định',
   roster,
   loading,
   cloudOnline,
   onSave,
-}: RosterManagerProps) {
+}: SettingsGroupRosterManagerProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const { value: saving, setTrue: startSaving, setFalse: stopSaving } = useBoolean(false);
   const [error, setError] = useState<string | null>(null);
@@ -125,7 +125,7 @@ export default function RosterManager({
           <span className="basis-full">Bấm biểu tượng bút để đặt vai trò.</span>
         </div>
 
-        <MemberAddForm disabled={disabled} onSubmit={handleAdd} />
+        <SettingsGroupMemberAddForm disabled={disabled} onSubmit={handleAdd} />
 
         {!cloudOnline && <p className="text-xs text-destructive">Chưa kết nối Cloud nên không thể chỉnh sửa.</p>}
         {error && <p className="text-xs text-destructive">{error}</p>}
@@ -153,7 +153,7 @@ export default function RosterManager({
                   {index + 1}.
                 </span>
                 {editingId === member.id ? (
-                  <MemberEditForm
+                  <SettingsGroupMemberEditForm
                     initial={{ name: member.name, gender: member.gender, role: member.role ?? '' }}
                     disabled={disabled}
                     onSubmit={(values) => handleSaveEdit(member.id, values)}

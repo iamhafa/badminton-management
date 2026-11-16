@@ -14,7 +14,7 @@ import { useId } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { groupFormSchema, type GroupDraft } from '../schemas/group.schema';
 
-interface GroupFormProps {
+interface SettingsGroupFormProps {
   initial: GroupDraft;
   courts: TCourt[];
   submitLabel: string;
@@ -24,7 +24,14 @@ interface GroupFormProps {
   onCancel?: () => void;
 }
 
-export default function GroupForm({ initial, courts, submitLabel, disabled, onSubmit, onCancel }: GroupFormProps) {
+export default function SettingsGroupForm({
+  initial,
+  courts,
+  submitLabel,
+  disabled,
+  onSubmit,
+  onCancel,
+}: SettingsGroupFormProps) {
   const uid = useId();
   const {
     register,

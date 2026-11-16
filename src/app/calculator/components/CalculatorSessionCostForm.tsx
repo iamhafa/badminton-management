@@ -33,7 +33,7 @@ const DEFAULT_INPUT_VALUES: Omit<
   waterPayerId: '',
 };
 
-interface SessionCostFormProps {
+interface CalculatorSessionCostFormProps {
   input: TSessionInput;
   onChange: (patch: Partial<TSessionInput>) => void;
   participants: TPlayer[];
@@ -50,7 +50,7 @@ interface SessionCostFormProps {
   onWaterEnabledChange: (enabled: boolean) => void;
 }
 
-export default function SessionCostForm({
+export default function CalculatorSessionCostForm({
   input,
   onChange,
   participants,
@@ -60,7 +60,7 @@ export default function SessionCostForm({
   onGroupChange,
   waterEnabled,
   onWaterEnabledChange,
-}: SessionCostFormProps) {
+}: CalculatorSessionCostFormProps) {
   const shuttleUnit: number = input.tubePrice / SHUTTLES_PER_TUBE;
   const shuttleTotalCost: number = shuttleUnit * input.shuttlesUsed;
   const weekday: string = getWeekdayVN(input.isoDate);

@@ -11,66 +11,92 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 # Project Architecture & Conventions
 
 > **Comprehensive Architecture Guide:**
-> Detailed architecture, data flow diagrams, and layer responsibilities are documented in [.agents/ARCHITECTURE.md](.agents/ARCHITECTURE.md). Always consult this document when architecting new features, modifying state stores, or integrating database APIs.
+> Detailed architecture, data flow and layer responsibilities are documented in [.agents/ARCHITECTURE.md](.agents/ARCHITECTURE.md). Consult it before adding features, changing stores, or touching the data layer.
 
 ## 1. Directory Structure & Colocation
 
-The project enforces route-based feature colocation under `src/app/<feature>/`:
+Code is colocated per route under `src/app/<route>/`. Shared code lives in the top-level `src/` folders.
 
 ```text
 src/
 ├── app/                                    # Next.js App Router
-│   ├── calculator/                         # Route: /calculator (components/, hooks/, schemas/, page.tsx)
-│   ├── history/                            # Route: /history (components/, page.tsx)
-│   ├── settings/                           # Route: /settings (layout.tsx, groups/, courts/, shuttlecocks/)
-│   └── layout.tsx                          # Root layout (Header, QueryProvider, ConfirmDialog)
+│   ├── layout.tsx                          # Root layout (QueryProvider, HeaderLayout, ConfirmDialog, Toaster)
+│   ├── loading.tsx, error.tsx, global-error.tsx, not-found.tsx
+│   ├── calculator/                         # /calculator: components/, hooks/, schemas/, utils/, page.tsx
+│   ├── history/                            # /history: components/, page.tsx
+│   └── settings/                           # /settings/*
+│       ├── layout.tsx                      # Settings tab bar (inline, Client Component)
+│       ├── courts/                         # components/, hooks/, schemas/, page.tsx
+│       ├── groups/                         # components/, hooks/, schemas/, page.tsx, [id]/page.tsx
+│       └── shuttlecocks/                   # components/, hooks/, schemas/, page.tsx
 │
 ├── components/                             # Cross-route shared UI
-│   ├── common/                             # Shared display widgets (ConfirmDialog, RoleBadge, LoadingState)
-│   ├── form/                               # Shared form inputs (MoneyInput, FieldError)
-│   ├── layout/                             # Shell layout (Header, ConnectionWatcher, QueryProvider)
-│   └── ui/                                 # Base shadcn/ui components (@base-ui/react) — DO NOT EDIT DIRECTLY
+│   ├── common/                             # ConfirmDialog, LoadingState, RoleBadge (+ GenderTag)
+│   ├── form/                               # MoneyInput, FieldError
+│   ├── layout/                             # HeaderLayout (app header + cloud status indicator)
+│   ├── provider/                           # QueryProvider (QueryClient + online/offline listener)
+│   └── ui/                                 # shadcn/ui primitives (@base-ui/react) — DO NOT EDIT DIRECTLY
 │
-├── hooks/                                  # Global data queries (useQueryGroups, useQueryCourts, etc.)
-├── libs/
-│   └── firebase/                           # Data Access Layer & Firebase SDK wrappers ONLY (api/, schema/)
-├── stores/                                 # Lightweight global UI stores (confirm.store, connection.store)
+├── hooks/                                  # Shared TanStack Query hooks (useQuery*, useMutate*)
+├── libs/firebase/                          # Data access layer only: api/, firestore/, schema/, helper/, constant/
+├── stores/                                 # Zustand UI stores: confirm.store, connection.store
 ├── styles/                                 # globals.css (Tailwind CSS v4)
-├── types/                                  # Pure TypeScript domain interfaces & types (*.types.ts)
-└── utils/                                  # Pure stateless utility functions (date.ts, format.ts, messenger.ts)
+├── types/                                  # Domain types (*.types.ts)
+└── utils/                                  # Pure helpers: date.ts, format.ts
 ```
 
 ## 2. Core Architectural Rules
 
-1. **`src/libs/`**:
-   - Strictly reserved for external service integrations (Firebase SDK wrapper and Data Access Layer).
-   - Never place pure utility functions, calculation helpers, UI form schemas, or React hooks inside `src/libs/`.
+1. **Colocation & boundaries**:
+   - Code used by only one route lives in that route's folder (`components/`, `hooks/`, `schemas/`, `utils/`).
+   - Move it to the shared `src/` folders only when a second route needs it.
+   - Routes must not import from each other (e.g. `app/calculator` must not import from `app/settings`). Shared code must not import from `src/app/`.
 
-2. **Form Schemas & Feature Colocation**:
-   - UI form validation schemas (used with `react-hook-form` via `@hookform/resolvers/zod`) are colocated within their feature route: `src/app/<route>/schemas/<entity>.schema.ts`.
-   - Distinct from database validation schemas in `src/libs/firebase/schema/` (which validate raw Firestore documents).
+2. **`page.tsx` is UI only**:
+   - Page state and handlers live in a route hook: `app/calculator/hooks/useCalculator.ts`, `app/settings/<tab>/hooks/use<Tab>Page.ts` (`useCourtsPage`, `useShuttlecocksPage`, `useGroupsPage`, `useGroupDetailPage`).
+   - Pure calculations live in the route's `utils/` (e.g. `app/calculator/utils/bill.ts` for `calculateBill`). No React there.
 
-3. **`src/components/ui/`**:
-   - Base primitives installed and managed by **shadcn/ui** (using `@base-ui/react`).
-   - **DO NOT MODIFY** files in `src/components/ui/` directly. Always customize styling from parent components using Tailwind utility classes or create wrapper components.
+3. **Component naming**:
+   - Every component file under `src/app/` is prefixed with its top-level screen name, so it is easy to find and never collides with shared components:
+     - `/calculator` -> `Calculator*` (`CalculatorBillSummaryCard`, `CalculatorSessionCostForm`, ...)
+     - `/history` -> `History*` (`HistoryList`)
+     - `/settings/*` -> `Settings<Entity>*` (`SettingsCourtForm`, `SettingsGroupForm`, `SettingsGroupMemberForm`, `SettingsGroupRosterManager`, `SettingsShuttlecockForm`)
+   - Named exports follow the same prefix (`SettingsCourtAddForm`, `SettingsCourtEditForm`, ...).
+   - New route components must follow this prefix rule.
 
-4. **Data Fetching vs Global UI State**:
-   - Server data is managed exclusively via **TanStack Query** hooks in `src/hooks/useQuery*.ts`.
-   - `src/stores/` (Zustand) is reserved only for lightweight global UI states (`confirm.store.ts`, `connection.store.ts`). Avoid monolithic ("God") stores or contexts.
+4. **Two kinds of schema (do not mix them up)**:
+   - **Form schemas** — `src/app/<route>/schemas/<entity>.schema.ts`: validate what the user types (used by `react-hook-form` via `@hookform/resolvers/zod`). Draft types such as `CourtDraft` are inferred from them.
+   - **Firestore schemas** — `src/libs/firebase/schema/<entity>.schema.ts`: validate documents read from Firestore and fill defaults for missing fields.
+   - The file names are the same on purpose; the folder tells you which kind it is.
 
-5. **`src/utils/`**:
-   - Pure, stateless helper functions without side effects or SDK dependencies. Keep filenames concise without redundant `-utils` suffixes (`date.ts`, `format.ts`, `messenger.ts`).
+5. **`src/libs/`**:
+   - Only external service integrations (Firebase SDK wrapper and the class APIs `CourtApi`, `GroupApi`, `SessionApi`, `ShuttlecockApi`).
+   - Never put UI form schemas, React hooks or calculation helpers in `src/libs/`.
 
-6. **Routing & Redirects**:
-   - Managed centrally in `next.config.ts`:
-     - `/` -> `/calculator` (permanent 308)
-     - `/settings` -> `/settings/groups` (temporary 307)
-   - Active routes: `/calculator`, `/history`, `/settings/groups`, `/settings/groups/[id]`, `/settings/courts`, `/settings/shuttlecocks`.
+6. **`src/components/ui/`**:
+   - Managed by **shadcn/ui**. **DO NOT MODIFY** these files. Customize from parent components with Tailwind classes or wrapper components.
+   - Add new primitives with `pnpm dlx shadcn@latest add <name>` (on this machine prefix with `NODE_OPTIONS=--use-system-ca` if the registry certificate check fails).
+
+7. **Server data vs UI state**:
+   - Server data goes through **TanStack Query** hooks in `src/hooks/useQuery*.ts` only. Mutations invalidate the matching query key.
+   - `src/stores/` (Zustand) holds only small global UI state (`confirm.store.ts`, `connection.store.ts`). No large "God" stores or contexts.
+
+8. **`src/utils/`**:
+   - Pure, stateless functions without React or SDK dependencies. Concise file names without `-utils` suffix.
+
+9. **Imports**:
+   - Inside the same route folder use relative paths (`./components/...`, `../schemas/...`). Everything else uses the `@/` alias.
+
+10. **Routing & redirects** (in `next.config.ts`):
+    - `/` -> `/calculator` (permanent 308), `/settings` -> `/settings/groups` (temporary 307).
+    - Routes: `/calculator`, `/history`, `/settings/groups`, `/settings/groups/[id]`, `/settings/courts`, `/settings/shuttlecocks`.
+    - `typedRoutes` is on: `href` and `router.push()` only accept existing routes.
 
 ## 3. Code Standards & Verification
 
-Before finalizing any task or committing changes, run:
+Before finalizing any task, run:
 
-- TypeScript check: `npx tsc --noEmit -p .`
-- Linting: `pnpm lint` (or `npx oxlint src`)
-- Formatting: `pnpm format` (or `npx oxfmt "src/**/*.{ts,tsx,json}" "*.json" ".*.json"`)
+- Route types + TypeScript: `npx next typegen && npx tsc --noEmit -p .`
+  - `next typegen` refreshes route types when the dev server is not running. If `tsc` reports errors only inside `.next/dev/types/` after moving routes, the dev-server cache is stale: restart `pnpm dev` (or delete `.next/dev`).
+- Linting: `pnpm lint`
+- Formatting: `pnpm format`

@@ -11,10 +11,10 @@ import { courtFormSchema, type CourtDraft } from '../schemas/court.schema';
 const EMPTY_COURT: CourtDraft = { name: '', address: '' };
 
 /** Trả về thông báo lỗi (VD: trùng tên) để hiện dưới ô tên, hoặc null nếu lưu thành công. */
-export type CourtSubmit = (values: CourtDraft) => Promise<string | null>;
+export type SettingsCourtSubmit = (values: CourtDraft) => Promise<string | null>;
 
 /** Form thêm sân mới (nằm phía trên danh sách). */
-export function CourtAddForm({ disabled, onSubmit }: { disabled: boolean; onSubmit: CourtSubmit }) {
+export function SettingsCourtAddForm({ disabled, onSubmit }: { disabled: boolean; onSubmit: SettingsCourtSubmit }) {
   const {
     register,
     handleSubmit,
@@ -59,7 +59,7 @@ export function CourtAddForm({ disabled, onSubmit }: { disabled: boolean; onSubm
 }
 
 /** Form sửa trực tiếp trên một dòng của danh sách. Enter để lưu, Escape để hủy. */
-export function CourtEditForm({
+export function SettingsCourtEditForm({
   initial,
   disabled,
   onSubmit,
@@ -67,7 +67,7 @@ export function CourtEditForm({
 }: {
   initial: CourtDraft;
   disabled: boolean;
-  onSubmit: CourtSubmit;
+  onSubmit: SettingsCourtSubmit;
   onCancel: () => void;
 }) {
   const {

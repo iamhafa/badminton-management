@@ -2,159 +2,200 @@
 
 ## 1. System Overview
 
-Badminton Management is a Next.js (App Router) progressive web application built to streamline badminton club session tracking, member roster management, court cost calculation, and split-bill accounting with affirmative support for female cap discounts and social messenger exports.
+Badminton Management is a Next.js (App Router) web app for a badminton club: it splits the cost of each session (court, shuttlecocks, optional drinking water) between players, applies a per-group female price cap, and stores session history in Firestore.
+
+Stack: Next.js 16 (Turbopack, `cacheComponents`, `typedRoutes`, React Compiler), React 19, TypeScript, Tailwind CSS v4, shadcn/ui on `@base-ui/react`, TanStack Query, Zustand, react-hook-form + zod, Firebase Firestore.
+
+All pages are Client Components that load data in the browser through TanStack Query.
 
 ---
 
 ## 2. Directory Structure & Colocation Strategy
 
-The codebase adheres strictly to **feature-colocation** under Next.js App Router: components, schemas, and sub-hooks specific to a route reside inside that route's folder. Shared primitives and global abstractions reside in root-level `src/` modules.
+The codebase uses **route-based feature colocation**: components, hooks, form schemas and pure helpers that only one route needs live inside that route's folder. Shared code lives in the top-level `src/` folders.
 
 ```text
 src/
 ├── app/                                    # Next.js App Router
-│   ├── layout.tsx                          # Root layout (Header, QueryProvider, ConfirmDialog, Toaster)
-│   ├── not-found.tsx, error.tsx            # Global fallbacks & boundaries
+│   ├── layout.tsx                          # Root layout (QueryProvider, HeaderLayout, ConfirmDialog, Toaster)
+│   ├── loading.tsx                         # Suspense fallback (uses LoadingState)
+│   ├── error.tsx, global-error.tsx, not-found.tsx
 │   │
-│   ├── calculator/                         # Route: /calculator (Main billing session)
-│   │   ├── components/                     # BillSummaryCard, ParticipantSelector, SessionCostForm, GuestForm
-│   │   ├── hooks/                          # useCalculator (Session calculation engine & drafts)
-│   │   ├── schemas/                        # guest.schema.ts
+│   ├── calculator/                         # /calculator (session cost calculation)
+│   │   ├── components/                     # CalculatorBillSummaryCard, CalculatorParticipantSelector,
+│   │   │                                   # CalculatorSessionCostForm, CalculatorGuestForm
+│   │   ├── hooks/useCalculator.ts          # Screen state: group/court/shuttlecock selection, players, guests, water toggle, reset
+│   │   ├── utils/bill.ts                   # Pure bill math: calculateBill, rounding, female cap split
+│   │   ├── schemas/guest.schema.ts         # Guest form schema
 │   │   └── page.tsx
 │   │
-│   ├── history/                            # Route: /history (Session bill archive)
-│   │   ├── components/                     # HistoryList (expandable cards, delete/restore)
+│   ├── history/                            # /history (saved sessions)
+│   │   ├── components/                     # HistoryList (filter, month groups, loading/empty states),
+│   │   │                                   # HistorySessionCard (expandable session, delete), HistoryMonthHeader
+│   │   ├── utils/month.ts                  # groupSessionsByMonth, sessionDateParts
 │   │   └── page.tsx
 │   │
-│   └── settings/                           # Route: /settings (Club & asset configurations)
-│       ├── layout.tsx                      # Settings navigation tabs (SettingsNav)
-│       ├── groups/                         # /settings/groups & /settings/groups/[id]
-│       │   ├── [id]/page.tsx               # Dedicated group detail & roster management
-│       │   ├── components/                 # GroupForm, MemberForm, RosterManager
-│       │   ├── schemas/                    # group.schema.ts, member.schema.ts
-│       │   └── page.tsx                    # Read-only group summary list
+│   └── settings/                           # /settings/*
+│       ├── layout.tsx                      # Settings tab bar (inline nav, Client Component)
+│       ├── groups/                         # /settings/groups and /settings/groups/[id]
+│       │   ├── page.tsx                    # Group summary list + create group
+│       │   ├── [id]/page.tsx               # Group detail: edit settings, hide, manage members
+│       │   ├── hooks/                      # useGroupsPage, useGroupDetailPage
+│       │   ├── components/                 # SettingsGroupForm, SettingsGroupRosterManager, SettingsGroupMemberForm
+│       │   └── schemas/                    # group.schema.ts, member.schema.ts
 │       ├── courts/                         # /settings/courts
-│       │   ├── components/                 # CourtForm
-│       │   ├── schemas/                    # court.schema.ts
-│       │   └── page.tsx
+│       │   ├── page.tsx
+│       │   ├── hooks/useCourtsPage.ts
+│       │   ├── components/SettingsCourtForm.tsx
+│       │   └── schemas/court.schema.ts
 │       └── shuttlecocks/                   # /settings/shuttlecocks
-│           ├── components/                 # ShuttlecockForm
-│           ├── schemas/                    # shuttlecock.schema.ts
-│           └── page.tsx
+│           ├── page.tsx
+│           ├── hooks/useShuttlecocksPage.ts
+│           ├── components/SettingsShuttlecockForm.tsx
+│           └── schemas/shuttlecock.schema.ts
 │
-├── components/                             # Cross-route reusable UI components
-│   ├── common/                             # Shared display widgets (ConfirmDialog, RoleBadge, LoadingState)
-│   ├── form/                               # Shared form inputs (MoneyInput, FieldError)
-│   ├── layout/                             # Shell layout (Header, ConnectionWatcher, QueryProvider)
-│   └── ui/                                 # Base shadcn/ui primitives (@base-ui/react) — DO NOT EDIT DIRECTLY
+├── components/                             # Cross-route reusable UI
+│   ├── common/                             # ConfirmDialog, LoadingState, RoleBadge (+ GenderTag)
+│   ├── form/                               # MoneyInput, FieldError
+│   ├── layout/HeaderLayout.tsx             # App header, main tabs, cloud status indicator
+│   ├── provider/QueryProvider.tsx          # QueryClient + browser online/offline listener
+│   └── ui/                                 # shadcn/ui primitives — DO NOT EDIT DIRECTLY
 │
-├── hooks/                                  # Global data fetching hooks (TanStack Query wrappers)
-│   ├── useQueryCourts.ts                   # useCourts, useActiveCourts, useHiddenCourts, useSaveCourt
-│   ├── useQueryGroups.ts                   # useGroups, useActiveGroups, useHiddenGroups, useSaveGroup
-│   ├── useQuerySessions.ts                 # useSessions, useSaveSession, useDeleteSession
-│   └── useQueryShuttlecocks.ts             # useShuttlecocks, useActiveShuttlecocks, useSetDefaultShuttlecock
+├── hooks/                                  # Shared TanStack Query hooks
+│   ├── useQueryCourts.ts                   # useQueryCourts, useMutateSaveCourt
+│   ├── useQueryGroups.ts                   # useQueryGroups, useMutateSaveGroup
+│   ├── useQuerySessions.ts                 # useQuerySessions, useMutateSaveSession, useMutateDeleteSession
+│   └── useQueryShuttlecocks.ts             # useQueryShuttlecocks, useMutateShuttlecock, useMutateSetDefaultShuttlecock
 │
-├── libs/
-│   └── firebase/                           # Data Access Layer (DAL) & Firebase SDK wrapper only
-│       ├── api/                            # Class-based APIs (CourtApi, GroupApi, ShuttlecockApi, SessionApi)
-│       ├── constant/                       # Firestore collection constants
-│       ├── firestore/                      # Firestore client initialization & offline cache config
-│       ├── helper/                         # Doc parsers and timestamp converters
-│       └── schema/                         # Database-level Zod validation schemas
+├── libs/firebase/                          # Data access layer only
+│   ├── api/                                # Static class APIs: CourtApi, GroupApi, SessionApi, ShuttlecockApi
+│   ├── firestore/firestore.client.ts       # Firebase app + Firestore initialization (env validated with zod)
+│   ├── schema/                             # Firestore document schemas (zod)
+│   ├── helper/                             # parseDocs, sortByName, cleanMembers
+│   ├── constant/                           # Collection names
+│   └── index.ts                            # Public exports (the four API classes)
 │
-├── stores/                                 # Lightweight UI stores (Zustand)
-│   ├── confirm.store.ts                    # Imperative confirm() dialog trigger
-│   └── connection.store.ts                 # Cloud connectivity status watcher
+├── stores/                                 # Zustand UI stores
+│   ├── confirm.store.ts                    # confirm(): promise-based confirmation dialog
+│   └── connection.store.ts                 # cloudStatus: 'connecting' | 'online' | 'offline'
 │
-├── styles/
-│   └── globals.css                         # Tailwind CSS v4 styles & CSS custom variables
-├── types/                                  # Pure TypeScript domain interfaces & types (*.types.ts)
-└── utils/                                  # Pure stateless utility functions (no external SDK dependencies)
-    ├── date.ts                             # Date formatting, weekdays, nowIso
-    ├── format.ts                           # formatVND, gender labels, currency helpers
-    └── messenger.ts                        # Social export string builder (Zalo/Messenger)
+├── styles/globals.css                      # Tailwind CSS v4
+├── types/                                  # Domain types (*.types.ts)
+└── utils/                                  # Pure helpers
+    ├── date.ts                             # Date parsing/formatting, weekday, nowIso, todayIso
+    └── format.ts                           # formatVND, describePayable, SHUTTLES_PER_TUBE, presets
 ```
 
 ---
 
-## 3. Layer Responsibilities & Architectural Boundaries
+## 3. Layer Responsibilities & Boundaries
 
-### 3.1. `src/libs/` (Data Access Layer)
-- Strictly reserved for external service integrations, SDK wrappers, and database clients.
-- Never put UI state, React hooks, pure calculation utilities, or UI form schemas into `src/libs/`.
-- All Firestore queries pass through typed class APIs (`CourtApi`, `GroupApi`, `ShuttlecockApi`, `SessionApi`).
+### 3.1. Routes (`src/app/<route>/`)
 
-### 3.2. `src/components/ui/` (Design System Primitives)
-- Base primitives managed by **shadcn/ui** and built on top of `@base-ui/react`.
-- **DO NOT MODIFY** files in `src/components/ui/` directly. Customize appearance through props, `className`, Tailwind utilities, or higher-level wrapper components.
+- `page.tsx` contains UI (JSX) only. It reads everything it needs from one route hook.
+- Route hooks (`hooks/use*.ts`) hold page state and handlers: loading/error flags, duplicate-name checks, create/update/hide handlers, toasts, confirm dialogs.
+- Pure calculations go in the route's `utils/` (no React), so they can be tested and reused.
+- A route never imports from another route. When a second route needs something, move it to the shared folders.
 
-### 3.3. `src/stores/` vs `src/hooks/`
-- Avoid monolithic "God" contexts or stores.
-- Server data (Firestore) is handled exclusively by **TanStack Query** (`src/hooks/useQuery*.ts`).
-- **Zustand stores** (`src/stores/`) are reserved strictly for ephemeral, global UI states (e.g. `confirm.store.ts` for imperative promise-based dialogs, `connection.store.ts` for network status).
+### 3.2. Component naming
 
-### 3.4. `src/utils/` (Pure Utilities)
-- Must be stateless and deterministic.
-- Zero dependencies on React, browser DOM, or external network services.
-- File names must be concise without redundant `-utils` suffixes (`date.ts`, `format.ts`, `messenger.ts`).
+- Every component file under `src/app/` is prefixed with its top-level screen name: `Calculator*` in `/calculator`, `History*` in `/history`, `Settings<Entity>*` in `/settings/*` (`SettingsCourtForm`, `SettingsGroupForm`, `SettingsGroupMemberForm`, `SettingsGroupRosterManager`, `SettingsShuttlecockForm`). Named exports use the same prefix. New route components follow the same rule.
+
+### 3.3. `src/libs/` (data access layer)
+
+- Only SDK wrappers and the four class APIs. All Firestore reads and writes go through them.
+- Never put UI state, React hooks, calculation helpers or form schemas here.
+
+### 3.4. `src/components/ui/` (design system primitives)
+
+- Managed by **shadcn/ui** on `@base-ui/react`. **DO NOT MODIFY.** Customize via props, `className`, or wrapper components.
+
+### 3.5. `src/hooks/` vs `src/stores/`
+
+- Server data (Firestore) goes only through TanStack Query hooks in `src/hooks/`.
+- Zustand stores hold only small global UI state (`confirm.store.ts`, `connection.store.ts`). No large stores or contexts.
+
+### 3.6. `src/utils/`
+
+- Stateless, deterministic, no React / DOM / network dependencies. Concise file names (`date.ts`, not `date-utils.ts`).
 
 ---
 
-## 4. Data Flow & Synchronization
+## 4. Data Flow
 
 ```
-┌────────────────────────────────────────────────────────┐
-│                   React Components                     │
-└───────────▲────────────────────────────────┬───────────┘
-            │ Reading                        │ Mutation
-            │                                ▼
-┌───────────┴──────────────┐     ┌───────────────────────┐
-│   TanStack Query Hooks   │     │  useMutate* Hooks     │
-│  (useActiveGroups, etc.) │     │ (Optimistic Updates)  │
-└───────────▲──────────────┘     └───────────┬───────────┘
-            │                                │
-            │ Fetch / Cache Invalidation     ▼
-┌───────────┴────────────────────────────────┴───────────┐
-│          Firebase APIs (GroupApi, CourtApi...)         │
-└───────────────────────────┬────────────────────────────┘
-                            │
-                            ▼
-┌────────────────────────────────────────────────────────┐
-│             Cloud Firestore / Local Cache              │
-└────────────────────────────────────────────────────────┘
+page.tsx (UI only)
+   │ uses
+   ▼
+route hook (useCourtsPage, useCalculator, ...)
+   │ uses
+   ▼
+TanStack Query hooks (useQuery*, useMutate*)  ──►  QueryCache onSuccess/onError ──► connection.store
+   │ call
+   ▼
+Firebase class APIs (CourtApi, GroupApi, ...)
+   │
+   ▼
+Cloud Firestore
 ```
 
-1. **Query Caching Pattern**:
-   - TanStack Query hooks use `initialData: []` combined with `initialDataUpdatedAt: 0` to ensure type safety (data is never `undefined`) while immediately triggering background revalidation on mount.
-   - Specialized selectors (e.g., `useActiveGroups`, `useHiddenGroups`) leverage the `select` option to maintain derived data without redundant fetches.
+1. **Queries**
+   - Query hooks use `initialData: []` with `initialDataUpdatedAt: 0`, so `data` is never `undefined` and a fetch runs on mount.
+   - Group, court and shuttlecock queries use `select` to return only active items (`deletedAt` is empty). Hidden items are not shown in the UI. Sessions are returned as-is.
+   - Defaults (set in `QueryProvider`): `staleTime` 60 s, `retry` 1.
 
-2. **Offline Resilience**:
-   - `connection.store.ts` monitors Firestore network state and window online status.
-   - UI mutation triggers are gracefully disabled or show warnings when offline, while reads seamlessly fall back to IndexedDB local cache.
+2. **Mutations**
+   - Save mutations invalidate their query key (`['courts']`, `['groups']`, ...) so the list is re-fetched from Firestore.
+   - Exception: `useMutateDeleteSession` removes the session from the cache immediately (optimistic) and restores it if the delete fails.
 
----
-
-## 5. Form Validation & Schemas
-
-- **UI Validation**: Form schemas are colocated with their feature route (`src/app/<route>/schemas/<entity>.schema.ts`) and used with `react-hook-form` via `@hookform/resolvers/zod`.
-- **Database Validation**: Firestore document validation lives in `src/libs/firebase/schema/` to guarantee that corrupt or malformed data from the network is caught before parsing into domain types.
-- UI draft types (e.g., `GroupDraft`, `CourtDraft`) are inferred directly from Zod schemas:
-  ```typescript
-  export type GroupDraft = z.infer<typeof groupFormSchema>;
-  ```
+3. **Connection status**
+   - `QueryProvider` sets `connection.store` from two sources: every query success/error (`QueryCache` callbacks) and the browser `online`/`offline` events.
+   - `HeaderLayout` shows the status. Pages disable edit actions while not online.
+   - There is no offline persistence: without a connection, data cannot be loaded or saved.
 
 ---
 
-## 6. Routing & Redirection Table
+## 5. Calculator Rules (summary)
 
-Configured centrally in `next.config.ts`:
-- `/` ➔ `/calculator` (Permanent 308 redirect)
-- `/settings` ➔ `/settings/groups` (Temporary 307 redirect)
-- Active routes:
-  - `/calculator`: Main session calculation
-  - `/history`: Match billing history
-  - `/settings/groups`: Group summary list
-  - `/settings/groups/[id]`: Group detail and member roster manager
-  - `/settings/courts`: Court venue management
-  - `/settings/shuttlecocks`: Shuttlecock brand and pricing settings
+- Shuttle cost = tube price / 12 × shuttles used.
+- Court + shuttle cost is split evenly; if the even share is above the group's female cap and there are men, each woman pays the cap and the men split the rest.
+- Water is optional (switch, off by default). When on, it is split only among players who drink; the water buyer's advance is subtracted from their amount.
+- Each person's amount is rounded to the nearest 1,000đ (≥ 500đ rounds up), so the total collected can differ slightly from the total cost.
+- The female cap comes from the group settings (read-only on the calculator). Saved sessions keep a copy of all values used.
 
+---
+
+## 6. Form Validation & Schemas
+
+There are two kinds of schema with the same file names:
+
+| Kind             | Location                                      | Validates                                                              |
+| ---------------- | --------------------------------------------- | ---------------------------------------------------------------------- |
+| Form schema      | `src/app/<route>/schemas/<entity>.schema.ts`  | What the user types, via `react-hook-form` + `@hookform/resolvers/zod` |
+| Firestore schema | `src/libs/firebase/schema/<entity>.schema.ts` | Documents read from Firestore (types, defaults for missing fields)     |
+
+Draft types are inferred from form schemas:
+
+```typescript
+export type GroupDraft = z.infer<typeof groupFormSchema>;
+```
+
+---
+
+## 7. Routing
+
+Configured in `next.config.ts`:
+
+- `/` ➔ `/calculator` (permanent 308)
+- `/settings` ➔ `/settings/groups` (temporary 307)
+
+Routes:
+
+- `/calculator`: session cost calculation
+- `/history`: saved sessions
+- `/settings/groups`: group list
+- `/settings/groups/[id]`: group detail and members
+- `/settings/courts`: courts
+- `/settings/shuttlecocks`: shuttlecock types and prices
+
+`typedRoutes` is enabled, so `href` and `router.push()` are type-checked against these routes. Route types are generated by `next dev`, `next build` or `next typegen`.

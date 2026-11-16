@@ -1,9 +1,8 @@
-import { format, getDay, isValid, parse, parseISO } from 'date-fns';
-
-const WEEKDAYS_VN = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'] as const;
+import { format, isValid, parse, parseISO } from 'date-fns';
+import { vi } from 'date-fns/locale';
 
 /** 'YYYY-MM-DD' -> Date theo giờ địa phương, hoặc null nếu không hợp lệ. */
-function parseIsoDate(isoDate: string): Date | null {
+export function parseIsoDate(isoDate: string): Date | null {
   const date = parse(isoDate, 'yyyy-MM-dd', new Date());
   return isValid(date) ? date : null;
 }
@@ -19,14 +18,14 @@ export function formatDateVN(isoDate: string): string {
 export function getWeekdayVN(isoDate: string): string {
   if (!isoDate) return '';
   const date = parseIsoDate(isoDate);
-  return date ? WEEKDAYS_VN[getDay(date)] : '';
+  return date ? format(date, 'EEEE', { locale: vi }) : '';
 }
 
 /** 'YYYY-MM-DD' -> 'Chủ Nhật, ngày 08/11/2026' */
 export function buildSessionTitle(isoDate: string): string {
   if (!isoDate) return '';
   const date = parseIsoDate(isoDate);
-  return date ? `${WEEKDAYS_VN[getDay(date)]}, ngày ${format(date, 'dd/MM/yyyy')}` : isoDate;
+  return date ? format(date, "EEEE', ngày 'dd/MM/yyyy", { locale: vi }) : isoDate;
 }
 
 /** Ngày hôm nay dạng 'YYYY-MM-DD' theo giờ địa phương. */

@@ -1,4 +1,3 @@
-import type { TPlayer } from '@/types/player.types';
 import type { TSessionBill } from '@/types/session.types';
 
 export const SHUTTLES_PER_TUBE = 12;
@@ -14,10 +13,6 @@ export function sumRoundedPayable(bill: TSessionBill): number {
 /** 50000 -> '50.000đ' */
 export function formatVND(amount: number): string {
   return `${Math.round(amount).toLocaleString('vi-VN')}đ`;
-}
-
-export function genderLabel(gender: TPlayer['gender']): string {
-  return gender === 'FEMALE' ? 'Nữ' : 'Nam';
 }
 
 /** Mô tả số tiền phải đóng / hoàn lại của 1 người. */

@@ -7,7 +7,7 @@ import { cn } from 'cn';
 import { CalendarDays, Clock, LoaderCircle, MapPin, Save, UsersRound } from 'lucide-react';
 import { useBoolean } from 'usehooks-ts';
 
-interface BillSummaryCardProps {
+interface CalculatorBillSummaryCardProps {
   bill: TSessionBill;
   onSave: () => Promise<void>;
   cloudOnline: boolean;
@@ -15,14 +15,19 @@ interface BillSummaryCardProps {
   saveBlockedReason?: string;
 }
 
-export default function BillSummaryCard({ bill, onSave, cloudOnline, saveBlockedReason }: BillSummaryCardProps) {
+export default function CalculatorBillSummaryCard({
+  bill,
+  onSave,
+  cloudOnline,
+  saveBlockedReason,
+}: CalculatorBillSummaryCardProps) {
   const { value: saving, setTrue: startSaving, setFalse: stopSaving } = useBoolean(false);
 
-  const hasPlayers = bill.totalCount > 0;
-  const collected = sumRoundedPayable(bill);
-  const avgPerPerson = hasPlayers ? Math.round(bill.totalCost / bill.totalCount) : 0;
-  const isCapInEffect = bill.maleCount > 0 && bill.femaleCount > 0 && bill.roundedFemaleUnit < bill.roundedMaleUnit;
-  const canSave = hasPlayers && !saving && cloudOnline && !saveBlockedReason;
+  const hasPlayers: boolean = bill.totalCount > 0;
+  const collected: number = sumRoundedPayable(bill);
+  const avgPerPerson: number = hasPlayers ? Math.round(bill.totalCost / bill.totalCount) : 0;
+  const isCapInEffect: boolean = bill.maleCount > 0 && bill.femaleCount > 0 && bill.roundedFemaleUnit < bill.roundedMaleUnit;
+  const canSave: boolean = hasPlayers && !saving && cloudOnline && !saveBlockedReason;
 
   async function handleSave() {
     if (!canSave) return;
@@ -40,8 +45,8 @@ export default function BillSummaryCard({ bill, onSave, cloudOnline, saveBlocked
       <div className="bg-[#0e241c] p-4 sm:p-5 text-white flex flex-col gap-3.5">
         {/* Header tag + hours */}
         <div className="flex items-center justify-between">
-          <span className="rounded-full bg-[#0d3b2f] px-3 py-1 text-[11px] font-extrabold uppercase tracking-wider text-[#34d399] border border-[#165c49]">
-            BẢNG TÍNH CHI TIẾT
+          <span className="rounded-full uppercase bg-[#0d3b2f] px-3 py-1 text-[11px] font-extrabold tracking-wider text-[#34d399] border border-[#165c49]">
+            Bảng tính chi tiết
           </span>
           <span className="flex items-center gap-1.5 rounded-full bg-[#0d3b2f] px-2.5 py-1 text-[11px] font-semibold text-[#34d399] border border-[#165c49]">
             <Clock className="size-3" />
@@ -70,7 +75,7 @@ export default function BillSummaryCard({ bill, onSave, cloudOnline, saveBlocked
         {/* Total cost + Average */}
         <div className="flex items-baseline justify-between pt-0.5">
           <div>
-            <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400">TỔNG CHI PHÍ BUỔI CHƠI</div>
+            <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Tổng chi phí buổi chơi</div>
             <div className="text-3xl font-black tracking-tight text-white mt-0.5">{formatVND(bill.totalCost)}</div>
           </div>
           {hasPlayers && (
@@ -114,9 +119,9 @@ export default function BillSummaryCard({ bill, onSave, cloudOnline, saveBlocked
           <div className="grid grid-cols-2 gap-2.5">
             {/* Box Nữ */}
             <div className="flex flex-col justify-between rounded-xl border border-pink-200/80 bg-[#fff5f8] p-3 shadow-xs">
-              <div className="flex items-center justify-between gap-1">
+              <div className="flex flex-col items-start gap-1 sm:flex-row sm:items-center sm:justify-between">
                 <span className="text-[11px] font-extrabold uppercase text-[#be185d]">MỨC ĐÓNG NỮ</span>
-                <span className="rounded-full bg-pink-100 px-2 py-0.5 text-[10px] font-bold text-[#be185d]">
+                <span className="rounded-full bg-pink-100 px-2 py-0.5 text-center text-[10px] leading-tight font-bold text-[#be185d]">
                   {isCapInEffect ? `Tối đa ${bill.femaleCap / 1000}k` : 'Chia đều'}
                 </span>
               </div>
@@ -132,9 +137,9 @@ export default function BillSummaryCard({ bill, onSave, cloudOnline, saveBlocked
 
             {/* Box Nam */}
             <div className="flex flex-col justify-between rounded-xl border border-blue-200/80 bg-[#f4f9ff] p-3 shadow-xs">
-              <div className="flex items-center justify-between gap-1">
+              <div className="flex flex-col items-start gap-1 sm:flex-row sm:items-center sm:justify-between">
                 <span className="text-[11px] font-extrabold uppercase text-[#1d4ed8]">MỨC ĐÓNG NAM</span>
-                <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-bold text-[#1d4ed8]">
+                <span className="rounded-full bg-blue-100 px-2 py-0.5 text-center text-[10px] leading-tight font-bold text-[#1d4ed8]">
                   {isCapInEffect ? 'Chia phần còn lại' : 'Chia đều'}
                 </span>
               </div>
@@ -161,7 +166,7 @@ export default function BillSummaryCard({ bill, onSave, cloudOnline, saveBlocked
                     {bill.totalCount} người
                   </span>
                 </span>
-                <span className="text-[#059669]">SỐ TIỀN CẦN ĐÓNG</span>
+                <span className="uppercase text-[#059669]">Số tiền cần đóng</span>
               </div>
               <ul className="max-h-120 divide-y divide-gray-100 overflow-y-auto pr-1">
                 {bill.playerBreakdowns.map((p) => (
@@ -204,29 +209,7 @@ export default function BillSummaryCard({ bill, onSave, cloudOnline, saveBlocked
                   </li>
                 ))}
               </ul>
-              {/* Rounding difference note */}
-              {(() => {
-                // Trừ phần đã ứng trước (vd: người mua nước) vì khoản đó đã được trả, không cần thu lại
-                const advanced: number = bill.playerBreakdowns.reduce((sum, p: TPlayerBreakdown) => sum + p.waterCredit, 0);
-                const expected: number = bill.totalCost - advanced;
-                const diff: number = collected - expected;
-                if (diff === 0) return null;
-
-                const advancer: TPlayerBreakdown | undefined = bill.playerBreakdowns.find((p) => p.waterCredit > 0);
-
-                return (
-                  <div className="mt-1 flex flex-col gap-0.5 text-[11px] leading-relaxed text-gray-400">
-                    <p>
-                      Tổng thu từ mọi người: <span className="font-semibold text-gray-500">{formatVND(collected)}</span>
-                      {' · '}Cần thu: <span className="font-semibold text-gray-500">{formatVND(expected)}</span>
-                      {advancer ? ` (đã trừ ${formatVND(advanced)} ${advancer.name} ứng trước)` : ''}
-                    </p>
-                    <p>
-                      {diff > 0 ? 'Dư' : 'Hụt'} {formatVND(Math.abs(diff))} vì số tiền của mỗi người được làm tròn về hàng nghìn.
-                    </p>
-                  </div>
-                );
-              })()}
+              <RoundingNote bill={bill} collected={collected} />
             </>
           ) : (
             <p className="text-center py-4 text-xs text-gray-400">Chọn thành viên hoặc thêm vãng lai để tính tiền.</p>
@@ -253,6 +236,33 @@ export default function BillSummaryCard({ bill, onSave, cloudOnline, saveBlocked
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Ghi chú chênh lệch do làm tròn: so tổng thu thực tế với số cần thu. Không lệch thì không hiện gì.
+ * `collected` là tổng số tiền mọi người đóng sau khi làm tròn về hàng nghìn.
+ */
+function RoundingNote({ bill, collected }: { bill: TSessionBill; collected: number }) {
+  // Trừ phần đã ứng trước (vd: người mua nước) vì khoản đó đã được trả, không cần thu lại
+  const advanced: number = bill.playerBreakdowns.reduce((sum, p: TPlayerBreakdown) => sum + p.waterCredit, 0);
+  const expected: number = bill.totalCost - advanced;
+  const diff: number = collected - expected;
+  if (diff === 0) return null;
+
+  const advancer: TPlayerBreakdown | undefined = bill.playerBreakdowns.find((p) => p.waterCredit > 0);
+
+  return (
+    <div className="mt-1 flex flex-col gap-0.5 text-[11px] leading-relaxed text-gray-400">
+      <p>
+        Tổng thu từ mọi người: <span className="font-semibold text-gray-500">{formatVND(collected)}</span>
+        {' · '}Cần thu: <span className="font-semibold text-gray-500">{formatVND(expected)}</span>
+        {advancer ? ` (đã trừ ${formatVND(advanced)} ${advancer.name} ứng trước)` : ''}
+      </p>
+      <p>
+        {diff > 0 ? 'Dư' : 'Hụt'} {formatVND(Math.abs(diff))} vì số tiền của mỗi người được làm tròn về hàng nghìn.
+      </p>
     </div>
   );
 }

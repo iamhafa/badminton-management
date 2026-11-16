@@ -16,12 +16,12 @@ Before leaving work, open your project terminal (preferably **Git Bash**) and ru
 ### Recommended: Git Bash (One-liner)
 
 ```bash
-git add -N . && git diff HEAD | gzip -c | base64 | clip
+git add -N . && git diff HEAD | gzip -c | base64 -w 0 | clip
 ```
 
 - `git add -N .`: Tracks newly created files so they are included in the diff.
 - `gzip -c`: Compresses the diff (reducing 2,000+ lines of code into a compact ~10KB string).
-- `base64`: Converts binary into pure alphanumeric characters (`A-Z, a-z, 0-9, +, /, =`), immune to browser formatting glitches.
+- `base64 -w 0`: Converts binary into pure alphanumeric characters without line wrapping (`-w 0` disables the 76-column wrap on GNU/Git Bash).
 - `clip`: Automatically copies the output directly into your Windows clipboard.
 
 > Now simply open the browser chat and press **Ctrl + V** to paste the string.

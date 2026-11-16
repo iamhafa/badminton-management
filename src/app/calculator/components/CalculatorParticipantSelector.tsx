@@ -7,13 +7,13 @@ import type { Gender, TPlayer } from '@/types/player.types';
 import { cn } from 'cn';
 import { Edit3, GlassWater, Mars, Megaphone, UserPlus, Users, Venus, X } from 'lucide-react';
 import { useMemo } from 'react';
-import GuestForm from './GuestForm';
+import CalculatorGuestForm from './CalculatorGuestForm';
 
 export { GenderTag };
 
 const NO_IDS: string[] = [];
 
-interface ParticipantSelectorProps {
+interface CalculatorParticipantSelectorProps {
   groupId?: string;
   roster: TPlayer[];
   rosterLoading: boolean;
@@ -34,7 +34,7 @@ interface ParticipantSelectorProps {
   onNavigateRoster?: () => void;
 }
 
-export default function ParticipantSelector({
+export default function CalculatorParticipantSelector({
   groupId,
   roster,
   rosterLoading,
@@ -53,7 +53,7 @@ export default function ParticipantSelector({
   onUpdateGuest,
   onRemoveGuest,
   onNavigateRoster,
-}: ParticipantSelectorProps) {
+}: CalculatorParticipantSelectorProps) {
   const selected = useMemo(() => new Set(selectedIds), [selectedIds]);
 
   return (
@@ -227,7 +227,7 @@ export default function ParticipantSelector({
           Vãng lai được tính phí theo giới tính (Nam hoặc Nữ) giống hệt thành viên cố định
         </p>
 
-        <GuestForm onAdd={onAddGuest} disabled={!groupId} />
+        <CalculatorGuestForm onAdd={onAddGuest} disabled={!groupId} />
 
         {/* Guest List Chips */}
         {guests.length > 0 ? (
