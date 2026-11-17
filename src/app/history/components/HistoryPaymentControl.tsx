@@ -3,7 +3,7 @@
 import type { TPaymentMethod, TSessionPlayer } from '@/types/session.type';
 import { cn } from 'cn';
 import { Check } from 'lucide-react';
-import { formatPaidAt, needsPayment, PAYMENT_METHOD_LABELS, PAYMENT_METHODS } from '../utils/payment';
+import { formatPaidAt, needsPayment, PAYMENT_METHOD_LABELS } from '../utils/payment';
 
 interface HistoryPaymentControlProps {
   player: TSessionPlayer;
@@ -13,15 +13,16 @@ interface HistoryPaymentControlProps {
 }
 
 /**
- * Trạng thái chuyển tiền của 1 người.
- * - Chưa chuyển: hai nút [CK] [TM], bấm một lần là xong.
- * - Đã chuyển: nhãn xanh kèm hình thức và giờ đánh dấu, bấm để bỏ đánh dấu.
- * Người được hoàn tiền (số tiền âm) dùng chữ "hoàn" thay cho "chuyển". Người không cần trả gì thì không hiện.
+ * Nút chuyển đổi trạng thái thanh toán của 1 người:
+ * - Khi chưa đóng: Nút bo tròn màu cam [Chưa đóng], hover vào đổi sang màu xanh [Xác nhận]. Click để xác nhận thanh toán (mặc định CK).
+ * - Sau khi click (Đã thu): Chữ "✓ Đã thu" màu xanh lá. Chạm lại để khôi phục về trạng thái "Chưa đóng".
  */
 export default function HistoryPaymentControl({ player, disabled, onChange }: HistoryPaymentControlProps) {
   if (!needsPayment(player)) return null;
   const refund = player.rounded_payable < 0;
-  const verb = refund ? 'đã hoàn' : 'đã chuyển';
+  const verb = refund ? 'đã hoàn' : 'đã thu';
+  const unpaidLabel = refund ? 'Chưa hoàn' : 'Chưa đóng';
+  const paidLabel = refund ? 'Đã hoàn' : 'Đã thu';
 
   if (player.paid_method) {
     const label = PAYMENT_METHOD_LABELS[player.paid_method];
@@ -31,33 +32,34 @@ export default function HistoryPaymentControl({ player, disabled, onChange }: Hi
         type="button"
         onClick={() => onChange(null)}
         disabled={disabled}
-        title={`${player.name} ${verb} (${label.long}) lúc ${paidAt}. Bấm để bỏ đánh dấu.`}
-        className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 transition-colors hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
+        title={`${player.name} ${verb} (${label.long}) lúc ${paidAt}. Chạm để khôi phục về "${unpaidLabel}".`}
+        className="inline-flex w-20.5 shrink-0 items-center justify-end gap-1 text-xs font-semibold text-emerald-700 transition-colors hover:text-emerald-800 hover:underline disabled:cursor-not-allowed disabled:opacity-50"
       >
-        <Check className="size-3" />
-        {refund ? `Đã hoàn ${label.short}` : label.short}
-        <span className="font-normal text-emerald-600">· {paidAt}</span>
+        <Check className="size-3.5 stroke-[2.5]" />
+        <span>{paidLabel}</span>
       </button>
     );
   }
 
   return (
-    <div className="flex shrink-0 items-center gap-1" role="group" aria-label={`Đánh dấu ${player.name} ${verb}`}>
-      {PAYMENT_METHODS.map((method) => (
-        <button
-          key={method}
-          type="button"
-          onClick={() => onChange(method)}
-          disabled={disabled}
-          title={`Đánh dấu ${player.name} ${verb} bằng ${PAYMENT_METHOD_LABELS[method].long.toLowerCase()}`}
-          className={cn(
-            'rounded-md border border-gray-200 bg-white px-1.5 py-0.5 text-[11px] font-semibold text-gray-600 transition-colors',
-            'hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-700 disabled:cursor-not-allowed disabled:opacity-50',
-          )}
-        >
-          {PAYMENT_METHOD_LABELS[method].short}
-        </button>
-      ))}
-    </div>
+    <button
+      type="button"
+      onClick={() => onChange('TRANSFER')}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        onChange('CASH');
+      }}
+      disabled={disabled}
+      title={`Chạm để xác nhận ${player.name} ${verb} (mặc định Chuyển khoản, chuột phải để chọn Tiền mặt)`}
+      className={cn(
+        'group inline-flex h-6 w-18 shrink-0 items-center justify-center rounded-full border text-xs font-medium whitespace-nowrap transition-all select-none',
+        'border-amber-300 bg-amber-50/70 text-amber-800',
+        'hover:border-sky-300 hover:bg-sky-50 hover:text-sky-700',
+        'disabled:cursor-not-allowed disabled:opacity-50',
+      )}
+    >
+      <span className="group-hover:hidden">{unpaidLabel}</span>
+      <span className="hidden group-hover:inline">Xác nhận</span>
+    </button>
   );
 }

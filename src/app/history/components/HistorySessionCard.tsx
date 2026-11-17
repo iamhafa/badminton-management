@@ -25,7 +25,7 @@ import {
 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { sessionDateParts } from '../utils/month';
-import { getPaymentSummary, type TPaymentSummary } from '../utils/payment';
+import { formatPaidAt, getPaymentSummary, type TPaymentSummary } from '../utils/payment';
 import HistoryPaymentControl from './HistoryPaymentControl';
 
 interface HistorySessionCardProps {
@@ -276,40 +276,61 @@ function PlayerColumn({ gender, players, bill, paymentDisabled, onSetPayment }: 
         {female ? 'Nữ' : 'Nam'} ({players.length})
       </p>
       <ul className="divide-y rounded-lg border">
-        {players.map((p) => (
-          <li key={p.player_id} className="flex items-center gap-2 px-2.5 py-1.5 text-sm">
-            <span className={cn('flex min-w-0 flex-1 flex-wrap items-center gap-x-1.5 gap-y-0.5', p.paid_method && 'opacity-50')}>
-              <span className="truncate font-medium">{p.name}</span>
-              <RoleBadge role={p.role} />
-              {p.type === 'GUEST' && (
-                <span
-                  className={cn(
-                    'text-xs',
-                    p.guest_source === 'FACEBOOK' ? 'font-semibold text-blue-600' : 'text-muted-foreground',
+        {players.map((p) => {
+          const isPaid = Boolean(p.paid_method);
+          return (
+            <li key={p.player_id} className="flex items-center gap-2 px-2.5 py-2 text-sm">
+              <div className="flex min-w-0 flex-1 flex-col">
+                <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5">
+                  <span className={cn('truncate font-medium', isPaid ? 'font-normal text-gray-400' : 'text-gray-900')}>
+                    {p.name}
+                  </span>
+                  <RoleBadge role={p.role} className={isPaid ? 'opacity-60' : undefined} />
+                  {p.type === 'GUEST' && (
+                    <span
+                      className={cn(
+                        'text-xs',
+                        isPaid
+                          ? 'text-gray-400'
+                          : p.guest_source === 'FACEBOOK'
+                            ? 'font-semibold text-blue-600'
+                            : 'text-muted-foreground',
+                      )}
+                    >
+                      {p.guest_source === 'FACEBOOK' ? 'vãng lai FB' : 'vãng lai'}
+                    </span>
                   )}
-                >
-                  {p.guest_source === 'FACEBOOK' ? 'vãng lai FB' : 'vãng lai'}
-                </span>
-              )}
-              {p.water_credit > 0 && <span className="text-xs text-amber-600">ứng nước {formatVND(p.water_credit)}</span>}
-              {!p.drinks_water && bill.water_fee > 0 && <span className="text-xs text-muted-foreground">không nước</span>}
-            </span>
-            <span
-              className={cn(
-                'shrink-0 font-semibold',
-                p.rounded_payable < 0 ? 'text-amber-600' : 'text-gray-900',
-                p.paid_method && 'opacity-50',
-              )}
-            >
-              {describePayable(p.rounded_payable)}
-            </span>
-            <HistoryPaymentControl
-              player={p}
-              disabled={paymentDisabled}
-              onChange={(method) => onSetPayment(p.player_id, method)}
-            />
-          </li>
-        ))}
+                </div>
+                {p.water_credit > 0 && (
+                  <span className={cn('text-xs', isPaid ? 'text-gray-400' : 'text-amber-600')}>
+                    ứng nước {formatVND(p.water_credit)}
+                  </span>
+                )}
+                {!p.drinks_water && bill.water_fee > 0 && <span className="text-xs text-muted-foreground">không nước</span>}
+                {isPaid && p.paid_at && (
+                  <span className="text-[11px] leading-tight text-gray-400">{formatPaidAt(p.paid_at)}</span>
+                )}
+              </div>
+              <span
+                className={cn(
+                  'shrink-0 text-right',
+                  isPaid
+                    ? 'font-normal text-gray-400'
+                    : p.rounded_payable < 0
+                      ? 'font-semibold text-amber-600'
+                      : 'font-semibold text-gray-900',
+                )}
+              >
+                {describePayable(p.rounded_payable)}
+              </span>
+              <HistoryPaymentControl
+                player={p}
+                disabled={paymentDisabled}
+                onChange={(method) => onSetPayment(p.player_id, method)}
+              />
+            </li>
+          );
+        })}
       </ul>
     </div>
   );

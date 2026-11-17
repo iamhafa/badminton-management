@@ -1,16 +1,16 @@
 import type { TPaymentMethod, TSession, TSessionDraft } from '@/types/session.type';
-import { SupabaseApi } from '../client/supabase.client';
+import { SupabaseClientApi } from '../client/supabase.client';
 
 /** Buổi chơi: bảng `sessions` + từng người chơi trong bảng `session_players`. */
-export class SessionApi extends SupabaseApi {
+export class SessionApi extends SupabaseClientApi {
   /** Lấy các buổi chơi đã lưu kèm người chơi (theo thứ tự lúc tính tiền), mới nhất trước. */
   static async fetchAll(): Promise<TSession[]> {
-    const { data, error } = await this.db
+    const { data, error } = await this.database
       .from('sessions')
       .select('*, session_players(*)')
       .order('created_at', { ascending: false })
       .order('position', { referencedTable: 'session_players', ascending: true });
-    this.throwIfError(error);
+    if (error) throw error;
     // Các cột enum (gender, paid_method...) đã được database kiểm tra bằng `check`, chỉ thu hẹp kiểu.
     return (data ?? []) as TSession[];
   }
@@ -21,15 +21,15 @@ export class SessionApi extends SupabaseApi {
    */
   static async save({ session_players, ...session }: TSessionDraft): Promise<string> {
     const players = session_players.map((player, position) => ({ ...player, position }));
-    const { data, error } = await this.db.rpc('save_session', { p_session: session, p_players: players });
-    this.throwIfError(error);
+    const { data, error } = await this.database.rpc('save_session', { p_session: session, p_players: players });
+    if (error) throw error;
     return data as string;
   }
 
   /** Xóa 1 buổi chơi; người chơi của buổi đó tự bị xóa theo (`on delete cascade`). */
   static async delete(id: string): Promise<void> {
-    const { error } = await this.db.from('sessions').delete().eq('id', id);
-    this.throwIfError(error);
+    const { error } = await this.database.from('sessions').delete().eq('id', id);
+    if (error) throw error;
   }
 
   /**
@@ -43,11 +43,11 @@ export class SessionApi extends SupabaseApi {
     paidAt: string | null,
   ): Promise<void> {
     if (playerIds.length === 0) return;
-    const { error } = await this.db
+    const { error } = await this.database
       .from('session_players')
       .update({ paid_method: method, paid_at: method ? paidAt : null })
       .eq('session_id', sessionId)
       .in('player_id', playerIds);
-    this.throwIfError(error);
+    if (error) throw error;
   }
 }
