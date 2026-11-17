@@ -7,9 +7,8 @@ import { useMutateSaveSession } from '@/hooks/useQuerySessions';
 import { useQueryShuttlecocks } from '@/hooks/useQueryShuttlecocks';
 import { confirm } from '@/stores/confirm.store';
 import { ConnectionState, useConnectionStore } from '@/stores/connection.store';
-import type { TGroup } from '@/types/group.types';
-import type { TSessionBill, TSessionInput } from '@/types/session.types';
-import { nowIso } from '@/utils/date';
+import type { TGroup } from '@/types/group.type';
+import type { TSessionDraft, TSessionInput } from '@/types/session.type';
 import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
@@ -55,6 +54,7 @@ export default function CalculatorPage() {
     updateGuest,
     removeGuest,
     bill,
+    counts,
     reset,
     waterEnabled,
     setWaterEnabled,
@@ -74,33 +74,31 @@ export default function CalculatorPage() {
     setSelectedGroupId(groupId);
   }
 
-  async function handleSaveSession(draft: TSessionBill): Promise<void> {
-    const tempId: string = crypto.randomUUID();
-    const newBill: TSessionBill = { ...draft, id: tempId, createdAt: draft.createdAt || nowIso() };
+  async function handleSaveSession(draft: TSessionDraft): Promise<void> {
     if (!cloudOnline) {
-      toast.info('Chưa kết nối Cloud nên chưa lưu được lên Firebase.');
+      toast.info('Chưa kết nối Cloud nên chưa lưu được.');
       return;
     }
     try {
-      await saveSession(newBill);
-      toast.success('Đã lưu buổi chơi vào Lịch sử (Firebase)');
+      await saveSession(draft);
+      toast.success('Đã lưu buổi chơi vào Lịch sử');
       reset();
     } catch (err) {
       toast.error(`Không thể lưu lên Cloud: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
 
-  const saveBlockedReason: string = !bill.groupId
+  const saveBlockedReason: string = !bill.group_id
     ? 'Chưa chọn nhóm'
-    : !bill.courtId
+    : !bill.court_id
       ? 'Chọn sân chơi trước khi lưu'
-      : !bill.shuttlecockId
+      : !bill.shuttlecock_id
         ? 'Chọn loại cầu trước khi lưu'
-        : waterEnabled && bill.waterFee <= 0
+        : waterEnabled && bill.water_fee <= 0
           ? 'Nhập số tiền nước trước khi lưu'
           : '';
 
-  if (!hydrated || !input.isoDate) {
+  if (!hydrated || !input.iso_date) {
     return <LoadingState />;
   }
 
@@ -119,14 +117,14 @@ export default function CalculatorPage() {
           onWaterEnabledChange={setWaterEnabled}
         />
         <CalculatorParticipantSelector
-          groupId={input.groupId}
+          groupId={input.group_id}
           roster={roster}
           rosterLoading={loading}
           selectedIds={selectedIds}
           noWaterIds={noWaterIds}
-          totalCount={bill.totalCount}
-          maleCount={bill.maleCount}
-          femaleCount={bill.femaleCount}
+          totalCount={counts.totalCount}
+          maleCount={counts.maleCount}
+          femaleCount={counts.femaleCount}
           onToggle={toggleMember}
           onToggleWater={waterEnabled ? toggleWater : undefined}
           onSelectAll={selectAllMembers}

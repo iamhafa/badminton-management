@@ -5,8 +5,8 @@ import { useMutateSaveGroup, useQueryGroups } from '@/hooks/useQueryGroups';
 import { useQuerySessions } from '@/hooks/useQuerySessions';
 import { confirm } from '@/stores/confirm.store';
 import { ConnectionState, useConnectionStore } from '@/stores/connection.store';
-import type { TGroup } from '@/types/group.types';
-import type { TPlayer } from '@/types/player.types';
+import type { TGroupSave } from '@/types/group.type';
+import type { TMemberDraft } from '@/types/player.type';
 import { nowIso } from '@/utils/date';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useMemo, useState } from 'react';
@@ -41,7 +41,12 @@ export function useGroupDetailPage() {
     if (!group) return 'Không tìm thấy nhóm';
     const dupError = duplicateNameError(draft.name, group.id);
     if (dupError) return dupError;
-    const updated: TGroup = { ...group, ...draft, updatedAt: nowIso() };
+    const updated: TGroupSave = {
+      ...group,
+      ...draft,
+      default_court_id: draft.default_court_id || null, // form dùng '' cho "chưa chọn"
+      updated_at: nowIso(),
+    };
     try {
       await saveGroup(updated);
       setIsEditing(false);
@@ -62,7 +67,7 @@ export function useGroupDetailPage() {
       destructive: true,
     });
     if (!ok) return;
-    const updated: TGroup = { ...group, deletedAt: nowIso(), updatedAt: nowIso() };
+    const updated: TGroupSave = { ...group, deleted_at: nowIso(), updated_at: nowIso() };
     try {
       await saveGroup(updated);
       toast.success(`Đã ẩn nhóm "${group.name}"`);
@@ -72,9 +77,9 @@ export function useGroupDetailPage() {
     }
   }
 
-  async function handleSaveMembers(members: TPlayer[]): Promise<void> {
+  async function handleSaveMembers(members: TMemberDraft[]): Promise<void> {
     if (!group) return;
-    const updated: TGroup = { ...group, members, updatedAt: nowIso() };
+    const updated: TGroupSave = { ...group, members, updated_at: nowIso() };
     try {
       await saveGroup(updated);
       toast.success('Đã lưu danh sách thành viên');
@@ -83,7 +88,7 @@ export function useGroupDetailPage() {
     }
   }
 
-  function courtName(id?: string): string | undefined {
+  function courtName(id: string | null): string | undefined {
     if (!id) return undefined;
     return courts.find((v) => v.id === id)?.name;
   }

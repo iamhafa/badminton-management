@@ -3,8 +3,8 @@
 import LoadingState from '@/components/common/LoadingState';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import type { TCourt } from '@/types/court.types';
-import type { TGroup } from '@/types/group.types';
+import type { TCourt } from '@/types/court.type';
+import type { TGroup } from '@/types/group.type';
 import { EyeOff, MapPin, Pencil } from 'lucide-react';
 import Link from 'next/link';
 import { SettingsCourtAddForm, SettingsCourtEditForm } from './components/SettingsCourtForm';

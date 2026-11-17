@@ -1,5 +1,5 @@
-import { CourtApi } from '@/libs/firebase';
-import type { TCourt } from '@/types/court.types';
+import { CourtApi } from '@/libs/supabase';
+import type { TCourt } from '@/types/court.type';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 /** Lấy toàn bộ danh sách sân cầu (chỉ active). */
@@ -9,7 +9,7 @@ export function useQueryCourts() {
     queryFn: () => CourtApi.fetchAll(),
     initialData: [],
     initialDataUpdatedAt: 0,
-    select: (courts) => courts.filter((g) => !g.deletedAt),
+    select: (courts) => courts.filter((g) => !g.deleted_at),
   });
 }
 

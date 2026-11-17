@@ -1,5 +1,6 @@
 'use client';
 
+import { SupabaseApi } from '@/libs/supabase/client/supabase.client';
 import { ConnectionState, useConnectionStore } from '@/stores/connection.store';
 import { QueryCache, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useEffect, useState, type ReactNode } from 'react';
@@ -31,9 +32,12 @@ export default function QueryProvider({ children }: { children: ReactNode }) {
 function createQueryClient(): QueryClient {
   return new QueryClient({
     // Mọi lần tải dữ liệu thành công/thất bại đều cập nhật chỉ báo kết nối Cloud ở Header.
+    // Chỉ lỗi mạng mới tính là mất kết nối; lỗi dữ liệu từ database (VD: vi phạm ràng buộc) thì trang tự báo lỗi.
     queryCache: new QueryCache({
       onSuccess: () => useConnectionStore.getState().setOnline(),
-      onError: () => useConnectionStore.getState().setOffline(),
+      onError: (error) => {
+        if (SupabaseApi.isNetworkError(error)) useConnectionStore.getState().setOffline();
+      },
     }),
     defaultOptions: {
       queries: {

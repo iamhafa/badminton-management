@@ -1,4 +1,4 @@
-import type { TSessionBill } from '@/types/session.types';
+import type { TSession } from '@/types/session.type';
 import { parseIsoDate } from '@/utils/date';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
@@ -8,7 +8,7 @@ export type TMonthGroup = {
   key: string;
   /** VD: 'Tháng 11/2026' */
   label: string;
-  sessions: TSessionBill[];
+  sessions: TSession[];
   /** Tổng chi phí các buổi trong tháng. */
   total: number;
 };
@@ -17,13 +17,11 @@ export type TMonthGroup = {
  * Gom các buổi chơi theo tháng của ngày chơi, tháng mới nhất trước.
  * Trong một tháng: ngày chơi mới nhất trước; cùng ngày thì buổi lưu sau đứng trước.
  */
-export function groupSessionsByMonth(sessions: TSessionBill[]): TMonthGroup[] {
-  const sorted = [...sessions].sort(
-    (a, b) => b.isoDate.localeCompare(a.isoDate) || (b.createdAt ?? '').localeCompare(a.createdAt ?? ''),
-  );
+export function groupSessionsByMonth(sessions: TSession[]): TMonthGroup[] {
+  const sorted = [...sessions].sort((a, b) => b.iso_date.localeCompare(a.iso_date) || b.created_at.localeCompare(a.created_at));
   const groups: TMonthGroup[] = [];
   for (const session of sorted) {
-    const date = parseIsoDate(session.isoDate);
+    const date = parseIsoDate(session.iso_date);
     const key = date ? format(date, 'yyyy-MM') : 'unknown';
     let group = groups.at(-1);
     if (!group || group.key !== key) {
@@ -31,7 +29,7 @@ export function groupSessionsByMonth(sessions: TSessionBill[]): TMonthGroup[] {
       groups.push(group);
     }
     group.sessions.push(session);
-    group.total += session.totalCost;
+    group.total += session.total_cost;
   }
   return groups;
 }

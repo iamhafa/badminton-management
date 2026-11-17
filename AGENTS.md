@@ -38,9 +38,10 @@ src/
 │   └── ui/                                 # shadcn/ui primitives (@base-ui/react) — DO NOT EDIT DIRECTLY
 │
 ├── hooks/                                  # Shared TanStack Query hooks (useQuery*, useMutate*)
-├── libs/firebase/                          # Data access layer only: api/, firestore/, schema/, helper/, constant/
+├── libs/supabase/                          # Data access layer only: supabase.client.ts, database.types.ts, api/
 ├── stores/                                 # Zustand UI stores: confirm.store, connection.store
 ├── styles/                                 # globals.css (Tailwind CSS v4)
+├── (root) supabase/migrations/             # SQL: tables, check constraints, rpc functions, RLS policies
 ├── types/                                  # Domain types (*.types.ts)
 └── utils/                                  # Pure helpers: date.ts, format.ts
 ```
@@ -64,13 +65,15 @@ src/
    - Named exports follow the same prefix (`SettingsCourtAddForm`, `SettingsCourtEditForm`, ...).
    - New route components must follow this prefix rule.
 
-4. **Two kinds of schema (do not mix them up)**:
-   - **Form schemas** — `src/app/<route>/schemas/<entity>.schema.ts`: validate what the user types (used by `react-hook-form` via `@hookform/resolvers/zod`). Draft types such as `CourtDraft` are inferred from them.
-   - **Firestore schemas** — `src/libs/firebase/schema/<entity>.schema.ts`: validate documents read from Firestore and fill defaults for missing fields.
-   - The file names are the same on purpose; the folder tells you which kind it is.
+4. **Data model = database (no mapper)**:
+   - The database is **Supabase (Postgres)**. Tables and functions are defined in `supabase/migrations/*.sql`.
+   - App types use the database rows directly (snake_case, `null` for empty): `src/types/*.types.ts` only alias `Tables<'...'>` from `src/libs/supabase/database.types.ts` and narrow enum columns (`gender`, `role`, `paid_method`...). Do not add mapper functions that rename fields.
+   - Form schemas in `src/app/<route>/schemas/` use column names too (`female_cap`, `tube_price`). Form-only quirks (a `<select>` uses `''` for "none") are converted to `null` right where the row is built.
+   - `database.types.ts` is generated: after changing a table, run `pnpm db:types` (needs `npx supabase login` once). Never edit it by hand.
 
 5. **`src/libs/`**:
-   - Only external service integrations (Firebase SDK wrapper and the class APIs `CourtApi`, `GroupApi`, `SessionApi`, `ShuttlecockApi`).
+   - Only external service integrations: the Supabase client and the class APIs `CourtApi`, `GroupApi`, `SessionApi`, `ShuttlecockApi` (`src/libs/supabase/`).
+   - Writes that touch several tables go through Postgres functions called with `rpc` (`save_session`, `save_group`, `set_default_shuttlecock`), so they run in one transaction.
    - Never put UI form schemas, React hooks or calculation helpers in `src/libs/`.
 
 6. **`src/components/ui/`**:
@@ -78,7 +81,7 @@ src/
    - Add new primitives with `pnpm dlx shadcn@latest add <name>` (on this machine prefix with `NODE_OPTIONS=--use-system-ca` if the registry certificate check fails).
 
 7. **Server data vs UI state**:
-   - Server data goes through **TanStack Query** hooks in `src/hooks/useQuery*.ts` only. Mutations invalidate the matching query key.
+   - Server data goes through **TanStack Query** hooks in `src/hooks/useQuery*.ts` only. Save mutations invalidate the matching query key; deleting a session and updating payment marks are optimistic (see ARCHITECTURE.md).
    - `src/stores/` (Zustand) holds only small global UI state (`confirm.store.ts`, `connection.store.ts`). No large "God" stores or contexts.
 
 8. **`src/utils/`**:

@@ -9,16 +9,17 @@
     "lint": "oxlint",
     "lint:fix": "oxlint --fix",
     "format": "oxfmt \"src/**/*.{ts,tsx,json}\" \"*.json\" \".*.json\"",
-    "format:check": "oxfmt --check \"src/**/*.{ts,tsx,json}\" \"*.json\" \".*.json\""
+    "format:check": "oxfmt --check \"src/**/*.{ts,tsx,json}\" \"*.json\" \".*.json\"",
+    "db:types": "supabase gen types typescript --remote iubovgfhnwktfpegqknx --schema public > node_modules/.database.type.tmp && node -e \"require('fs').renameSync('node_modules/.database.type.tmp', 'src/libs/supabase/types/database.type.ts')\" && oxfmt src/libs/supabase/types/database.type.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",
     "@hookform/resolvers": "^7.0.6",
+    "@supabase/supabase-js": "^2.119.0",
     "@tanstack/react-query": "^5.107.1",
     "class-variance-authority": "^0.7.1",
     "cn": "^0.5.2",
     "date-fns": "^4.4.0",
-    "firebase": "^13.3.0",
     "lucide-react": "^1.73.0",
     "next": "16.4.6",
     "next-themes": "^0.4.6",
@@ -40,6 +41,7 @@
     "babel-plugin-react-compiler": "^1.0.0",
     "oxfmt": "^0.52.0",
     "oxlint": "^1.93.0",
+    "supabase": "^3.2.0",
     "tailwindcss": "^4.3.5",
     "typescript": "^5.9.3"
   },

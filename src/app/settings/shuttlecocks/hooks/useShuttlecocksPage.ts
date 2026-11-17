@@ -3,7 +3,7 @@
 import { useMutateSetDefaultShuttlecock, useMutateShuttlecock, useQueryShuttlecocks } from '@/hooks/useQueryShuttlecocks';
 import { confirm } from '@/stores/confirm.store';
 import { ConnectionState, useConnectionStore } from '@/stores/connection.store';
-import type { TShuttlecock } from '@/types/shuttlecock.types';
+import type { TShuttlecock } from '@/types/shuttlecock.type';
 import { nowIso } from '@/utils/date';
 import { useState } from 'react';
 import { toast } from 'sonner';
@@ -36,10 +36,11 @@ export function useShuttlecocksPage() {
     const newShuttlecock: TShuttlecock = {
       id: crypto.randomUUID(),
       name,
-      tubePrice: values.tubePrice,
-      createdAt: now,
-      updatedAt: now,
-      deletedAt: null,
+      tube_price: values.tube_price,
+      is_default: false,
+      created_at: now,
+      updated_at: now,
+      deleted_at: null,
     };
     try {
       await saveShuttlecock(newShuttlecock);
@@ -55,7 +56,7 @@ export function useShuttlecocksPage() {
     if (findDuplicate(name, shuttlecock.id)) {
       return `Loại cầu "${name}" đã có trong danh sách.`;
     }
-    const updated: TShuttlecock = { ...shuttlecock, name, tubePrice: values.tubePrice, updatedAt: nowIso() };
+    const updated: TShuttlecock = { ...shuttlecock, name, tube_price: values.tube_price, updated_at: nowIso() };
     try {
       await saveShuttlecock(updated);
       setEditingId(null);
@@ -75,7 +76,7 @@ export function useShuttlecocksPage() {
       destructive: true,
     });
     if (!ok) return;
-    const updated: TShuttlecock = { ...shuttlecock, deletedAt: nowIso(), updatedAt: nowIso() };
+    const updated: TShuttlecock = { ...shuttlecock, deleted_at: nowIso(), updated_at: nowIso() };
     try {
       await saveShuttlecock(updated);
       toast.success(`Đã ẩn loại cầu "${shuttlecock.name}"`);
@@ -85,7 +86,7 @@ export function useShuttlecocksPage() {
   }
 
   async function handleSetDefault(shuttlecock: TShuttlecock): Promise<void> {
-    if (shuttlecock.isDefault) return;
+    if (shuttlecock.is_default) return;
     try {
       await setDefaultShuttlecock(shuttlecock.id);
       toast.success(`Đã đặt "${shuttlecock.name}" làm loại cầu mặc định`);

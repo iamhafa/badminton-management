@@ -1,9 +1,9 @@
-import type { TPlayer } from '@/types/player.types';
-import type { TPlayerBreakdown, TSessionBill, TSessionInput } from '@/types/session.types';
-import { buildSessionTitle, formatDateVN } from '@/utils/date';
+import type { TParticipant } from '@/types/player.type';
+import type { TSessionDraft, TSessionInput, TSessionPlayer } from '@/types/session.type';
 import { SHUTTLES_PER_TUBE } from '@/utils/format';
 
 // Các phép tính tiền của 1 buổi chơi. Hàm thuần (không dùng React), nên kiểm thử và dùng lại được ở nơi khác.
+// Kết quả có đúng hình dạng của bảng `sessions` + `session_players` để lưu thẳng vào database.
 
 /** Làm tròn hàng nghìn: phần lẻ < 500đ làm tròn xuống, >= 500đ làm tròn lên. */
 function roundToThousand(amount: number): number {
@@ -45,67 +45,66 @@ function calcGenderShares(
 /** Tính toàn bộ bill cho 1 buổi chơi. `players` là danh sách người đã tham gia (cố định + vãng lai). */
 export function calculateBill(
   input: TSessionInput,
-  players: TPlayer[],
-  createdAt = '',
-  names: { groupName: string; courtName: string } = { groupName: '', courtName: '' },
-): TSessionBill {
+  players: TParticipant[],
+  names: { group_name: string; court_name: string } = { group_name: '', court_name: '' },
+): TSessionDraft {
   let maleCount: number = 0;
   let femaleCount: number = 0;
   let waterDrinkersCount: number = 0;
 
-  players.forEach((player: TPlayer): void => {
+  players.forEach((player: TParticipant): void => {
     if (player.gender === 'MALE') maleCount++;
     else femaleCount++;
-    if (player.drinksWater !== false) waterDrinkersCount++;
+    if (player.drinks_water) waterDrinkersCount++;
   });
-  const totalCount: number = maleCount + femaleCount;
 
-  const shuttleTotalCost: number = calcShuttleCost(input.tubePrice, input.shuttlesUsed);
-  const courtAndShuttleCost: number = input.courtFee + shuttleTotalCost;
-  const totalCost: number = courtAndShuttleCost + input.waterFee;
+  const shuttleTotalCost: number = calcShuttleCost(input.tube_price, input.shuttles_used);
+  const courtAndShuttleCost: number = input.court_fee + shuttleTotalCost;
+  const totalCost: number = courtAndShuttleCost + input.water_fee;
 
   // Phân bổ phí sân + cầu cho Nam / Nữ theo mức trần ưu tiên nữ
-  const { maleShare, femaleShare } = calcGenderShares(courtAndShuttleCost, maleCount, femaleCount, input.femaleCap);
+  const { maleShare, femaleShare } = calcGenderShares(courtAndShuttleCost, maleCount, femaleCount, input.female_cap);
 
   // Phân bổ tiền nước lọc: chỉ chia cho những người có uống nước
-  const waterPerPerson: number = waterDrinkersCount > 0 && input.waterFee > 0 ? input.waterFee / waterDrinkersCount : 0;
+  const waterPerPerson: number = waterDrinkersCount > 0 && input.water_fee > 0 ? input.water_fee / waterDrinkersCount : 0;
 
-  const playerBreakdowns: TPlayerBreakdown[] = players.map((player: TPlayer) => {
-    const drinksWater: boolean = player.drinksWater !== false;
+  const sessionPlayers: Omit<TSessionPlayer, 'session_id'>[] = players.map((player: TParticipant, position: number) => {
     const courtAndShuttleShare: number = player.gender === 'FEMALE' ? femaleShare : maleShare;
-    const waterShare: number = drinksWater ? waterPerPerson : 0;
+    const waterShare: number = player.drinks_water ? waterPerPerson : 0;
     const baseShare: number = courtAndShuttleShare + waterShare;
-    const waterCredit: number = input.waterPayerId && input.waterPayerId === player.id ? input.waterFee : 0;
+    const waterCredit: number = input.water_payer_id && input.water_payer_id === player.id ? input.water_fee : 0;
     const rawNetPayable: number = baseShare - waterCredit;
 
     return {
-      ...player,
-      drinksWater,
-      courtAndShuttleShare,
-      waterShare,
-      baseShare,
-      waterCredit,
-      rawNetPayable,
-      roundedPayable: roundToThousand(rawNetPayable),
+      player_id: player.id,
+      position,
+      name: player.name,
+      gender: player.gender,
+      type: player.type,
+      guest_source: player.guest_source,
+      role: player.role,
+      drinks_water: player.drinks_water,
+      court_and_shuttle_share: courtAndShuttleShare,
+      water_share: waterShare,
+      base_share: baseShare,
+      water_credit: waterCredit,
+      raw_net_payable: rawNetPayable,
+      rounded_payable: roundToThousand(rawNetPayable),
+      paid_method: null, // buổi mới lưu: chưa ai chuyển tiền
+      paid_at: null,
     };
   });
 
   return {
     ...input,
-    createdAt,
-    groupName: names.groupName,
-    courtName: names.courtName,
-    dateFormatted: formatDateVN(input.isoDate),
-    title: buildSessionTitle(input.isoDate),
-    shuttleTotalCost,
-    totalCost,
-    waterDrinkersCount,
-    waterPerPerson,
-    roundedFemaleUnit: roundToThousand(femaleShare + waterPerPerson),
-    roundedMaleUnit: roundToThousand(maleShare + waterPerPerson),
-    totalCount,
-    maleCount,
-    femaleCount,
-    playerBreakdowns,
+    group_name: names.group_name,
+    court_name: names.court_name,
+    shuttle_total_cost: shuttleTotalCost,
+    total_cost: totalCost,
+    water_drinkers_count: waterDrinkersCount,
+    water_per_person: waterPerPerson,
+    rounded_female_unit: roundToThousand(femaleShare + waterPerPerson),
+    rounded_male_unit: roundToThousand(maleShare + waterPerPerson),
+    session_players: sessionPlayers,
   };
 }

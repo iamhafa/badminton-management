@@ -5,7 +5,7 @@ import { useMutateSaveGroup, useQueryGroups } from '@/hooks/useQueryGroups';
 import { useQuerySessions } from '@/hooks/useQuerySessions';
 import { confirm } from '@/stores/confirm.store';
 import { ConnectionState, useConnectionStore } from '@/stores/connection.store';
-import type { TGroup } from '@/types/group.types';
+import type { TGroup, TGroupSave } from '@/types/group.type';
 import { nowIso } from '@/utils/date';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
@@ -39,13 +39,14 @@ export function useGroupsPage() {
     const dupError = duplicateNameError(draft.name);
     if (dupError) return dupError;
     const now = nowIso();
-    const group: TGroup = {
+    const group: TGroupSave = {
       id: crypto.randomUUID(),
       ...draft,
+      default_court_id: draft.default_court_id || null, // form dùng '' cho "chưa chọn"
       members: [],
-      createdAt: now,
-      updatedAt: now,
-      deletedAt: null,
+      created_at: now,
+      updated_at: now,
+      deleted_at: null,
     };
     try {
       await saveGroup(group);
@@ -67,7 +68,7 @@ export function useGroupsPage() {
       destructive: true,
     });
     if (!ok) return;
-    const updated: TGroup = { ...group, deletedAt: nowIso(), updatedAt: nowIso() };
+    const updated: TGroupSave = { ...group, deleted_at: nowIso(), updated_at: nowIso() };
     try {
       await saveGroup(updated);
       toast.success(`Đã ẩn nhóm "${group.name}"`);
@@ -76,7 +77,7 @@ export function useGroupsPage() {
     }
   }
 
-  function courtName(id: string): string | undefined {
+  function courtName(id: string | null): string | undefined {
     return courts.find((court) => court.id === id)?.name;
   }
 

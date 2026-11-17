@@ -125,7 +125,7 @@ function CloudIndicator({ status, onRetry }: { status: CloudStatus; onRetry: () 
     return (
       <span className="inline-flex items-center gap-1.5 rounded-full bg-[#075334] px-2.5 py-0.5 text-[11px] text-emerald-100 border border-emerald-600/40 font-medium">
         <Cloud className="size-3.5 text-emerald-400 shrink-0" />
-        Đã kết nối Cloud (Firebase)
+        Đã kết nối Cloud (Supabase)
       </span>
     );
   }

@@ -1,0 +1,38 @@
+# Giữ project Supabase (gói miễn phí) không bị tạm dừng.
+# Supabase tạm dừng project miễn phí nếu ~1 tuần không có truy vấn tới database; vài truy vấn mỗi ngày là đủ.
+# Workflow này đọc 1 dòng của bảng sessions mỗi ngày (truy vấn thật qua REST API, không chỉ gọi health check).
+#
+# Cần thêm 2 secret trong GitHub: Settings -> Secrets and variables -> Actions -> New repository secret
+#   SUPABASE_URL              = https://<project-ref>.supabase.co
+#   SUPABASE_PUBLISHABLE_KEY  = publishable key của project (sb_publishable_...)
+# Nếu lần chạy thất bại, GitHub gửi email cho bạn: kiểm tra project có đang bị tạm dừng không.
+name: Supabase keep-alive
+
+on:
+  schedule:
+    - cron: '17 1 * * *' # mỗi ngày lúc 01:17 UTC (08:17 giờ Việt Nam)
+  workflow_dispatch: # cho phép bấm chạy tay trong tab Actions
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Query database
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_PUBLISHABLE_KEY" ]; then
+            echo "Thiếu secret SUPABASE_URL hoặc SUPABASE_PUBLISHABLE_KEY." >&2
+            exit 1
+          fi
+          # Khóa mới (sb_publishable_...) không phải JWT: chỉ gửi trong header apikey, không gửi Authorization: Bearer.
+          status=$(curl -sS -o response.json -w '%{http_code}' \
+            "$SUPABASE_URL/rest/v1/sessions?select=id&limit=1" \
+            -H "apikey: $SUPABASE_PUBLISHABLE_KEY")
+          echo "HTTP $status"
+          if [ "$status" != "200" ]; then
+            cat response.json
+            exit 1
+          fi

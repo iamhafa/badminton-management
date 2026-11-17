@@ -1,6 +1,6 @@
 import { Badge } from '@/components/ui/badge';
+import type { Gender, MemberRole } from '@/types/player.type';
 import { cn } from 'cn';
-import type { Gender, MemberRole } from '@/types/player.types';
 import { Crown, Shield } from 'lucide-react';
 
 export const ROLE_LABELS: Record<MemberRole, string> = {
@@ -8,7 +8,7 @@ export const ROLE_LABELS: Record<MemberRole, string> = {
   VICE_LEADER: 'Phó nhóm',
 };
 
-export default function RoleBadge({ role, className }: { role?: MemberRole; className?: string }) {
+export default function RoleBadge({ role, className }: { role?: MemberRole | null; className?: string }) {
   if (!role) return null;
   const isLeader: boolean = role === 'LEADER';
   const Icon = isLeader ? Crown : Shield;

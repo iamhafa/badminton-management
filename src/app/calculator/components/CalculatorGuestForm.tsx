@@ -2,7 +2,7 @@
 
 import { Input } from '@/components/ui/input';
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
-import type { Gender } from '@/types/player.types';
+import type { Gender } from '@/types/player.type';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Plus } from 'lucide-react';
 import { Controller, useForm } from 'react-hook-form';

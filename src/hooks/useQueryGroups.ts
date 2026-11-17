@@ -1,5 +1,5 @@
-import { GroupApi } from '@/libs/firebase';
-import type { TGroup } from '@/types/group.types';
+import { GroupApi } from '@/libs/supabase';
+import type { TGroup, TGroupSave } from '@/types/group.type';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 /** Lấy toàn bộ danh sách nhóm (chỉ active). */
@@ -9,15 +9,15 @@ export function useQueryGroups() {
     queryFn: () => GroupApi.fetchAll(),
     initialData: [],
     initialDataUpdatedAt: 0,
-    select: (groups: TGroup[]) => groups.filter((g: TGroup) => !g.deletedAt),
+    select: (groups: TGroup[]) => groups.filter((g: TGroup) => !g.deleted_at),
   });
 }
 
-/** Tạo mới hoặc ghi đè 1 nhóm, rồi tải lại danh sách nhóm. */
+/** Tạo mới hoặc ghi đè 1 nhóm cùng danh sách thành viên, rồi tải lại danh sách nhóm. */
 export function useMutateSaveGroup() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (group: TGroup) => GroupApi.save(group),
+    mutationFn: (group: TGroupSave) => GroupApi.save(group),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['groups'] }),
   });
 }

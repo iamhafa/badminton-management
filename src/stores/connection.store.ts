@@ -11,7 +11,7 @@ export interface ConnectionState {
 }
 
 /**
- * Trạng thái kết nối Cloud (Firebase) của app.
+ * Trạng thái kết nối Cloud (Supabase) của app.
  * Chỉ thay đổi từ sự kiện phía client (kết quả tải dữ liệu, mạng bật/tắt), không đặt giá trị lúc render trên server.
  */
 export const useConnectionStore = create<ConnectionState>()((set) => ({

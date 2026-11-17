@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
-import type { TCourt } from '@/types/court.types';
+import type { TCourt } from '@/types/court.type';
 import { FEMALE_CAP_PRESETS } from '@/utils/format';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { cn } from 'cn';
@@ -67,11 +67,11 @@ export default function SettingsGroupForm({
           </Label>
           <Controller
             control={control}
-            name="femaleCap"
+            name="female_cap"
             render={({ field }) => (
               <>
                 <div className="relative">
-                  <MoneyInput id={`${uid}-cap`} {...field} aria-invalid={!!errors.femaleCap} className="pr-16" />
+                  <MoneyInput id={`${uid}-cap`} {...field} aria-invalid={!!errors.female_cap} className="pr-16" />
                   <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">
                     VNĐ/nữ
                   </span>
@@ -96,7 +96,7 @@ export default function SettingsGroupForm({
               </>
             )}
           />
-          <FieldError message={errors.femaleCap?.message} />
+          <FieldError message={errors.female_cap?.message} />
           <p className="text-[11px] text-gray-500">
             Mỗi bạn nữ trả tối đa số tiền này (chưa gồm tiền nước). Nếu chia đều vượt mức trần, phần còn thiếu do các bạn nam chia
             nhau.
@@ -107,7 +107,7 @@ export default function SettingsGroupForm({
           <Label htmlFor={`${uid}-court`} className="text-xs font-semibold text-gray-600">
             Sân hay chơi (không bắt buộc)
           </Label>
-          <NativeSelect id={`${uid}-court`} {...register('defaultCourtId')} className="w-full">
+          <NativeSelect id={`${uid}-court`} {...register('default_court_id')} className="w-full">
             <NativeSelectOption value="">Chưa chọn</NativeSelectOption>
             {courts.map((v) => (
               <NativeSelectOption key={v.id} value={v.id}>

@@ -1,5 +1,5 @@
-import { ShuttlecockApi } from '@/libs/firebase';
-import type { TShuttlecock } from '@/types/shuttlecock.types';
+import { ShuttlecockApi } from '@/libs/supabase';
+import type { TShuttlecock } from '@/types/shuttlecock.type';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 /** Lấy toàn bộ danh sách loại cầu (chỉ active). */
@@ -9,7 +9,7 @@ export function useQueryShuttlecocks() {
     queryFn: () => ShuttlecockApi.fetchAll(),
     initialData: [],
     initialDataUpdatedAt: 0,
-    select: (shuttlecocks: TShuttlecock[]) => shuttlecocks.filter((shuttlecock: TShuttlecock) => !shuttlecock.deletedAt),
+    select: (shuttlecocks: TShuttlecock[]) => shuttlecocks.filter((shuttlecock: TShuttlecock) => !shuttlecock.deleted_at),
   });
 }
 

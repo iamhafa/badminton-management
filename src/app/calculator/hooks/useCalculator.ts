@@ -1,27 +1,38 @@
 'use client';
 
-import type { TCourt } from '@/types/court.types';
-import type { TGroup } from '@/types/group.types';
-import type { Gender, TPlayer } from '@/types/player.types';
-import type { TSessionBill, TSessionInput } from '@/types/session.types';
-import type { TShuttlecock } from '@/types/shuttlecock.types';
+import type { TCourt } from '@/types/court.type';
+import type { TGroup } from '@/types/group.type';
+import type { Gender, GuestSource, TParticipant } from '@/types/player.type';
+import type { TSessionDraft, TSessionInput } from '@/types/session.type';
+import type { TShuttlecock } from '@/types/shuttlecock.type';
 import { todayIso } from '@/utils/date';
+import { countPlayers } from '@/utils/session';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { calculateBill } from '../utils/calculate-bill';
 
-const DEFAULT_INPUT: Omit<TSessionInput, 'isoDate'> = {
-  groupId: '',
-  courtId: '',
-  hoursPlayed: 2,
-  courtFee: 280000,
-  shuttlecockId: '',
-  shuttleBrand: '',
-  tubePrice: 0,
-  shuttlesUsed: 5,
-  waterFee: 0,
-  waterPayerId: '',
-  femaleCap: 50000,
+const DEFAULT_INPUT: Omit<TSessionInput, 'iso_date'> = {
+  group_id: null,
+  court_id: null,
+  hours_played: 2,
+  court_fee: 280000,
+  shuttlecock_id: null,
+  shuttle_brand: '',
+  tube_price: 0,
+  shuttles_used: 5,
+  water_fee: 0,
+  water_payer_id: null,
+  female_cap: 50000,
 };
+
+/** Loại cầu mặc định: loại được đánh dấu, hoặc loại đầu tiên. */
+function pickDefaultShuttlecock(shuttlecocks: TShuttlecock[]): TShuttlecock | undefined {
+  return shuttlecocks.find((s) => s.is_default) ?? shuttlecocks[0];
+}
+
+/** Sân hay chơi của nhóm, nếu sân đó còn đang dùng. */
+function pickDefaultCourtId(group: TGroup, courts: TCourt[]): string | null {
+  return group.default_court_id && courts.some((c) => c.id === group.default_court_id) ? group.default_court_id : null;
+}
 
 /**
  * State của màn hình tính tiền cho 1 nhóm.
@@ -31,9 +42,9 @@ const DEFAULT_INPUT: Omit<TSessionInput, 'isoDate'> = {
 export function useCalculator(group: TGroup | undefined, courts: TCourt[], shuttlecocks: TShuttlecock[]) {
   const roster = useMemo(() => group?.members ?? [], [group]);
 
-  const [input, setInput] = useState<TSessionInput>({ ...DEFAULT_INPUT, isoDate: '' });
+  const [input, setInput] = useState<TSessionInput>({ ...DEFAULT_INPUT, iso_date: '' });
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [guests, setGuests] = useState<TPlayer[]>([]);
+  const [guests, setGuests] = useState<TParticipant[]>([]);
   const [noWaterIds, setNoWaterIds] = useState<string[]>([]);
   // Tiền nước là tùy chọn: tắt thì không tính tiền nước, ô nhập và nút "Nước" của từng người cũng ẩn.
   const [waterEnabled, setWaterEnabled] = useState(false);
@@ -46,19 +57,16 @@ export function useCalculator(group: TGroup | undefined, courts: TCourt[], shutt
     setSelectedIds([]);
     setGuests([]);
     setNoWaterIds([]);
-
-    const defaultCourtId = courts.some((v) => v.id === group.defaultCourtId) ? group.defaultCourtId : '';
-    const defaultShuttle = shuttlecocks.find((s) => s.isDefault) ?? shuttlecocks[0];
-
+    const defaultShuttle = pickDefaultShuttlecock(shuttlecocks);
     setInput((prev) => ({
       ...prev,
-      groupId: group.id,
-      femaleCap: group.femaleCap,
-      courtId: defaultCourtId,
-      shuttlecockId: defaultShuttle?.id ?? '',
-      shuttleBrand: defaultShuttle?.name ?? '',
-      tubePrice: defaultShuttle?.tubePrice ?? 0,
-      waterPayerId: '',
+      group_id: group.id,
+      female_cap: group.female_cap,
+      court_id: pickDefaultCourtId(group, courts),
+      shuttlecock_id: defaultShuttle?.id ?? null,
+      shuttle_brand: defaultShuttle?.name ?? '',
+      tube_price: defaultShuttle?.tube_price ?? 0,
+      water_payer_id: null,
     }));
   } else if (!group && appliedGroupId !== '') {
     // Khi bỏ chọn nhóm về rỗng
@@ -68,71 +76,70 @@ export function useCalculator(group: TGroup | undefined, courts: TCourt[], shutt
     setNoWaterIds([]);
     setInput((prev) => ({
       ...prev,
-      groupId: '',
-      femaleCap: DEFAULT_INPUT.femaleCap,
-      courtId: '',
-      shuttlecockId: '',
-      shuttleBrand: '',
-      tubePrice: 0,
-      waterPayerId: '',
+      group_id: null,
+      female_cap: DEFAULT_INPUT.female_cap,
+      court_id: null,
+      shuttlecock_id: null,
+      shuttle_brand: '',
+      tube_price: 0,
+      water_payer_id: null,
     }));
   }
 
   // Điền sân mặc định của nhóm nếu danh sách sân được tải xong sau khi chọn nhóm
   if (group && courts.length > 0 && courtAppliedGroupId !== group.id) {
     setCourtAppliedGroupId(group.id);
-    const defaultCourtId = courts.some((v) => v.id === group.defaultCourtId) ? group.defaultCourtId : '';
-    if (defaultCourtId && !input.courtId) {
-      setInput((prev) => ({ ...prev, courtId: defaultCourtId }));
+    const defaultCourtId = pickDefaultCourtId(group, courts);
+    if (defaultCourtId && !input.court_id) {
+      setInput((prev) => ({ ...prev, court_id: defaultCourtId }));
     }
   }
 
   // Điền cầu mặc định nếu danh sách cầu tải xong sau khi đã chọn nhóm và chưa có cầu
-  if (group && shuttlecocks.length > 0 && !input.shuttlecockId) {
-    const defaultShuttle = shuttlecocks.find((s) => s.isDefault) ?? shuttlecocks[0];
+  if (group && shuttlecocks.length > 0 && !input.shuttlecock_id) {
+    const defaultShuttle = pickDefaultShuttlecock(shuttlecocks);
     if (defaultShuttle) {
       setInput((prev) => ({
         ...prev,
-        shuttlecockId: defaultShuttle.id,
-        shuttleBrand: defaultShuttle.name,
-        tubePrice: prev.tubePrice > 0 ? prev.tubePrice : defaultShuttle.tubePrice,
+        shuttlecock_id: defaultShuttle.id,
+        shuttle_brand: defaultShuttle.name,
+        tube_price: prev.tube_price > 0 ? prev.tube_price : defaultShuttle.tube_price,
       }));
     }
   }
 
   // Sân đang chọn bị ẩn: bỏ chọn để bắt buộc chọn lại.
-  if (input.courtId && !courts.some((v) => v.id === input.courtId)) {
-    setInput((prev) => ({ ...prev, courtId: '' }));
+  if (input.court_id && !courts.some((c) => c.id === input.court_id)) {
+    setInput((prev) => ({ ...prev, court_id: null }));
   }
 
   // Loại cầu đang chọn bị ẩn: bỏ chọn để bắt buộc chọn lại (giữ nguyên giá đã nhập).
-  if (input.shuttlecockId && !shuttlecocks.some((s) => s.id === input.shuttlecockId)) {
-    setInput((prev) => ({ ...prev, shuttlecockId: '' }));
+  if (input.shuttlecock_id && !shuttlecocks.some((s) => s.id === input.shuttlecock_id)) {
+    setInput((prev) => ({ ...prev, shuttlecock_id: null }));
   }
 
   // Đặt ngày hôm nay ở client sau khi mount: với cacheComponents, dùng `new Date()` lúc prerender sẽ báo lỗi.
   useEffect(() => {
     // oxlint-disable-next-line react/set-state-in-effect -- đồng bộ với đồng hồ hệ thống, chỉ chạy một lần sau khi mount
-    setInput((prev) => (prev.isoDate ? prev : { ...prev, isoDate: todayIso() }));
+    setInput((prev) => (prev.iso_date ? prev : { ...prev, iso_date: todayIso() }));
   }, []);
 
   /** Đưa màn hình về trạng thái ban đầu (VD: sau khi lưu buổi chơi), vẫn giữ nhóm đang chọn. */
   const reset = useCallback(() => {
-    const defaultShuttle = shuttlecocks.find((s) => s.isDefault) ?? shuttlecocks[0];
-    const defaultCourtId = group && courts.some((v) => v.id === group.defaultCourtId) ? group.defaultCourtId : '';
+    const defaultShuttle = pickDefaultShuttlecock(shuttlecocks);
     setSelectedIds([]);
     setGuests([]);
     setNoWaterIds([]);
     setWaterEnabled(false);
     setInput({
       ...DEFAULT_INPUT,
-      isoDate: todayIso(),
-      groupId: group?.id ?? '',
-      femaleCap: group?.femaleCap ?? DEFAULT_INPUT.femaleCap,
-      courtId: defaultCourtId,
-      shuttlecockId: group ? (defaultShuttle?.id ?? '') : '',
-      shuttleBrand: group ? (defaultShuttle?.name ?? '') : '',
-      tubePrice: group ? (defaultShuttle?.tubePrice ?? 0) : 0,
+      iso_date: todayIso(),
+      group_id: group?.id ?? null,
+      female_cap: group?.female_cap ?? DEFAULT_INPUT.female_cap,
+      court_id: group ? pickDefaultCourtId(group, courts) : null,
+      shuttlecock_id: group ? (defaultShuttle?.id ?? null) : null,
+      shuttle_brand: group ? (defaultShuttle?.name ?? '') : '',
+      tube_price: group ? (defaultShuttle?.tube_price ?? 0) : 0,
     });
   }, [group, courts, shuttlecocks]);
 
@@ -153,13 +160,14 @@ export function useCalculator(group: TGroup | undefined, courts: TCourt[], shutt
   }, []);
 
   const addGuest = useCallback((name: string, gender: Gender) => {
-    const newGuest: TPlayer = {
+    const newGuest: TParticipant = {
       id: `guest_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
       name,
       gender,
       type: 'GUEST',
-      guestSource: 'FRIEND',
-      active: true,
+      guest_source: 'FRIEND',
+      role: null,
+      drinks_water: true,
     };
     setGuests((prev) => [...prev, newGuest]);
     // Vãng lai mặc định không tính tiền nước; bấm nút "Nước" để bật lại
@@ -168,11 +176,13 @@ export function useCalculator(group: TGroup | undefined, courts: TCourt[], shutt
 
   const toggleGuestSource = useCallback((id: string) => {
     setGuests((prev) =>
-      prev.map((g) => (g.id === id ? { ...g, guestSource: g.guestSource === 'FACEBOOK' ? 'FRIEND' : 'FACEBOOK' } : g)),
+      prev.map((g) =>
+        g.id === id ? { ...g, guest_source: g.guest_source === 'FACEBOOK' ? 'FRIEND' : ('FACEBOOK' as GuestSource) } : g,
+      ),
     );
   }, []);
 
-  const updateGuest = useCallback((id: string, patch: Partial<Pick<TPlayer, 'name' | 'gender' | 'guestSource'>>) => {
+  const updateGuest = useCallback((id: string, patch: Partial<Pick<TParticipant, 'name' | 'gender' | 'guest_source'>>) => {
     setGuests((prev) => prev.map((g) => (g.id === id ? { ...g, ...patch } : g)));
   }, []);
 
@@ -181,53 +191,56 @@ export function useCalculator(group: TGroup | undefined, courts: TCourt[], shutt
     setNoWaterIds((prev) => prev.filter((x) => x !== id));
   }, []);
 
-  const participants = useMemo<TPlayer[]>(() => {
+  const participants = useMemo<TParticipant[]>(() => {
     const selectedSet = new Set(selectedIds);
     const noWaterSet = new Set(noWaterIds);
 
-    const fromRoster: TPlayer[] = [];
-    for (let i = 0; i < roster.length; i++) {
-      const m = roster[i];
-      if (selectedSet.has(m.id)) {
-        fromRoster.push({
-          ...m,
-          drinksWater: !noWaterSet.has(m.id),
-        });
-      }
-    }
+    const fromRoster: TParticipant[] = roster
+      .filter((m) => selectedSet.has(m.id))
+      .map((m) => ({
+        id: m.id,
+        name: m.name,
+        gender: m.gender,
+        type: 'REGULAR',
+        guest_source: null,
+        role: m.role,
+        drinks_water: !noWaterSet.has(m.id),
+      }));
 
-    const guestList = guests.map((g) => ({
-      ...g,
-      drinksWater: !noWaterSet.has(g.id),
-    }));
+    const guestList = guests.map((g) => ({ ...g, drinks_water: !noWaterSet.has(g.id) }));
 
     return [...fromRoster, ...guestList];
   }, [roster, selectedIds, guests, noWaterIds]);
 
   // Người mua nước: giữ lựa chọn nếu người đó còn trong danh sách, ngược lại mặc định là Trưởng nhóm
   // hoặc người chơi đầu tiên. Tính ngay khi render nên không cần effect.
-  const defaultPayerId = (participants.find((p) => p.role === 'LEADER') ?? participants[0])?.id ?? '';
+  const defaultPayerId = (participants.find((p) => p.role === 'LEADER') ?? participants[0])?.id ?? null;
   const waterPayerId = !waterEnabled
-    ? ''
-    : participants.some((p) => p.id === input.waterPayerId)
-      ? input.waterPayerId
+    ? null
+    : participants.some((p) => p.id === input.water_payer_id)
+      ? input.water_payer_id
       : defaultPayerId;
   // Tắt tiền nước: tiền nước bằng 0 (số đã nhập vẫn được giữ trong `input` để bật lại thì còn).
   const effectiveInput = useMemo<TSessionInput>(
-    () => ({ ...input, waterFee: waterEnabled ? input.waterFee : 0, waterPayerId }),
+    () => ({ ...input, water_fee: waterEnabled ? input.water_fee : 0, water_payer_id: waterPayerId }),
     [input, waterEnabled, waterPayerId],
   );
 
-  const courtName = courts.find((v) => v.id === input.courtId)?.name ?? '';
+  const courtName = courts.find((c) => c.id === input.court_id)?.name ?? '';
   const groupName = group?.name ?? '';
 
   // Tên loại cầu luôn lấy từ danh mục, nên đổi tên loại cầu ở Cài đặt sẽ cập nhật theo.
-  const shuttleBrand = shuttlecocks.find((s) => s.id === input.shuttlecockId)?.name ?? '';
+  const shuttleBrand = shuttlecocks.find((s) => s.id === input.shuttlecock_id)?.name ?? '';
 
-  const bill: TSessionBill = useMemo(
-    () => calculateBill({ ...effectiveInput, shuttleBrand }, participants, '', { groupName, courtName }),
+  const bill: TSessionDraft = useMemo(
+    () =>
+      calculateBill({ ...effectiveInput, shuttle_brand: shuttleBrand }, participants, {
+        group_name: groupName,
+        court_name: courtName,
+      }),
     [effectiveInput, shuttleBrand, participants, groupName, courtName],
   );
+  const counts = useMemo(() => countPlayers(participants), [participants]);
 
   const hasSelection = selectedIds.length > 0 || guests.length > 0;
 
@@ -242,6 +255,7 @@ export function useCalculator(group: TGroup | undefined, courts: TCourt[], shutt
     participants,
     hasSelection,
     bill,
+    counts,
     reset,
     waterEnabled,
     setWaterEnabled,

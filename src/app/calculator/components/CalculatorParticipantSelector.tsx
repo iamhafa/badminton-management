@@ -3,7 +3,7 @@
 import RoleBadge, { GenderTag } from '@/components/common/RoleBadge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
-import type { Gender, TPlayer } from '@/types/player.types';
+import type { Gender, TMember, TParticipant } from '@/types/player.type';
 import { cn } from 'cn';
 import { Edit3, GlassWater, Mars, Megaphone, UserPlus, Users, Venus, X } from 'lucide-react';
 import { useMemo } from 'react';
@@ -14,8 +14,8 @@ export { GenderTag };
 const NO_IDS: string[] = [];
 
 interface CalculatorParticipantSelectorProps {
-  groupId?: string;
-  roster: TPlayer[];
+  groupId?: string | null;
+  roster: TMember[];
   rosterLoading: boolean;
   selectedIds: string[];
   noWaterIds?: string[];
@@ -26,10 +26,10 @@ interface CalculatorParticipantSelectorProps {
   onToggleWater?: (id: string) => void;
   onSelectAll: () => void;
   onClearAll: () => void;
-  guests: TPlayer[];
+  guests: TParticipant[];
   onAddGuest: (name: string, gender: Gender) => void;
   onToggleGuestSource?: (id: string) => void;
-  onUpdateGuest: (id: string, patch: Partial<Pick<TPlayer, 'name' | 'gender' | 'guestSource'>>) => void;
+  onUpdateGuest: (id: string, patch: Partial<Pick<TParticipant, 'name' | 'gender' | 'guest_source'>>) => void;
   onRemoveGuest: (id: string) => void;
   onNavigateRoster?: () => void;
 }
@@ -244,18 +244,18 @@ export default function CalculatorParticipantSelector({
                     type="button"
                     onClick={() => onToggleGuestSource?.(guest.id)}
                     title={
-                      guest.guestSource === 'FACEBOOK'
+                      guest.guest_source === 'FACEBOOK'
                         ? 'Khách tuyển từ Facebook (Click để đổi thành Bạn bè)'
                         : 'Khách bạn bè/người quen (Click để đổi thành Tuyển FB)'
                     }
                     className={cn(
                       'flex shrink-0 items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-extrabold uppercase transition-all border cursor-pointer select-none',
-                      guest.guestSource === 'FACEBOOK'
+                      guest.guest_source === 'FACEBOOK'
                         ? 'bg-[#1877f2] text-white border-[#166fe5] hover:bg-[#166fe5] shadow-2xs'
                         : 'bg-[#ffedd5] text-[#c2410c] border-[#fed7aa] hover:bg-[#fed7aa]',
                     )}
                   >
-                    {guest.guestSource === 'FACEBOOK' ? (
+                    {guest.guest_source === 'FACEBOOK' ? (
                       <>
                         <Megaphone className="size-3" />
                         Tuyển FB

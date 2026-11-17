@@ -4,7 +4,7 @@ import RoleBadge, { GenderTag, ROLE_LABELS } from '@/components/common/RoleBadge
 import { Button } from '@/components/ui/button';
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { confirm } from '@/stores/confirm.store';
-import type { TPlayer } from '@/types/player.types';
+import type { TMember, TMemberDraft } from '@/types/player.type';
 import { cn } from 'cn';
 import { LoaderCircle, Pencil, Trash2 } from 'lucide-react';
 import { useState } from 'react';
@@ -14,11 +14,11 @@ import { SettingsGroupMemberAddForm, SettingsGroupMemberEditForm } from './Setti
 
 interface SettingsGroupRosterManagerProps {
   title?: string;
-  roster: TPlayer[];
+  roster: TMember[];
   loading: boolean;
   cloudOnline: boolean;
-  /** Lưu toàn bộ danh sách mới lên Firestore. */
-  onSave: (members: TPlayer[]) => Promise<void>;
+  /** Lưu toàn bộ danh sách thành viên mới (thứ tự trong mảng = thứ tự hiển thị). */
+  onSave: (members: TMemberDraft[]) => Promise<void>;
 }
 
 export default function SettingsGroupRosterManager({
@@ -37,7 +37,7 @@ export default function SettingsGroupRosterManager({
   const disabled = saving || !cloudOnline;
 
   /** Lưu danh sách mới. Trả về thông báo lỗi nếu thất bại, hoặc null nếu thành công. */
-  async function persist(next: TPlayer[]): Promise<string | null> {
+  async function persist(next: TMemberDraft[]): Promise<string | null> {
     startSaving();
     try {
       await onSave(next);
@@ -57,11 +57,11 @@ export default function SettingsGroupRosterManager({
   async function handleAdd(values: MemberDraft): Promise<string | null> {
     if (isDuplicate(values.name)) return `"${values.name}" đã có trong danh sách.`;
     setError(null);
-    const member: TPlayer = { id: crypto.randomUUID(), name: values.name, gender: values.gender, type: 'REGULAR' };
+    const member: TMemberDraft = { id: crypto.randomUUID(), name: values.name, gender: values.gender, role: null };
     return persist([...roster, member]);
   }
 
-  function startEdit(member: TPlayer) {
+  function startEdit(member: TMember) {
     setEditingId(member.id);
     setError(null);
   }
@@ -69,7 +69,7 @@ export default function SettingsGroupRosterManager({
   async function handleSaveEdit(id: string, values: MemberDraft): Promise<string | null> {
     const { name } = values;
     if (isDuplicate(name, id)) return `"${name}" đã có trong danh sách.`;
-    const role = values.role || undefined;
+    const role = values.role || null;
     const previousHolder = role ? roster.find((m) => m.id !== id && m.role === role) : undefined;
     if (previousHolder && role) {
       const ok = await confirm({
@@ -82,7 +82,7 @@ export default function SettingsGroupRosterManager({
     // Mỗi vai trò chỉ 1 người: người đang giữ vai trò đó sẽ về thành viên thường.
     const next = roster.map((m) => {
       if (m.id === id) return { ...m, name, gender: values.gender, role };
-      if (role && m.role === role) return { ...m, role: undefined };
+      if (role && m.role === role) return { ...m, role: null };
       return m;
     });
     const message = await persist(next);
@@ -90,7 +90,7 @@ export default function SettingsGroupRosterManager({
     return message;
   }
 
-  async function handleDelete(member: TPlayer) {
+  async function handleDelete(member: TMember) {
     const ok = await confirm({
       title: `Xóa "${member.name}"?`,
       description: 'Thành viên sẽ bị xóa khỏi danh sách cố định của nhóm. Lịch sử các buổi đã lưu không bị ảnh hưởng.',

@@ -9,7 +9,7 @@ import { Check, Plus, X } from 'lucide-react';
 import { Controller, useForm, type Control, type FieldErrors } from 'react-hook-form';
 import { shuttlecockFormSchema, type ShuttlecockDraft } from '../schemas/shuttlecock.schema';
 
-const EMPTY_SHUTTLECOCK: ShuttlecockDraft = { name: '', tubePrice: 0 };
+const EMPTY_SHUTTLECOCK: ShuttlecockDraft = { name: '', tube_price: 0 };
 
 /** Trả về thông báo lỗi (VD: trùng tên) để hiện dưới ô tên, hoặc null nếu lưu thành công. */
 export type SettingsShuttlecockSubmit = (values: ShuttlecockDraft) => Promise<string | null>;
@@ -28,12 +28,12 @@ function TubePriceField({
     <div className="relative min-w-0 flex-1">
       <Controller
         control={control}
-        name="tubePrice"
+        name="tube_price"
         render={({ field }) => (
           <MoneyInput
             {...field}
             aria-label={label}
-            aria-invalid={!!errors.tubePrice}
+            aria-invalid={!!errors.tube_price}
             placeholder="Giá 1 ống mặc định"
             className="pr-14"
           />
@@ -80,7 +80,7 @@ export function SettingsShuttlecockAddForm({ disabled, onSubmit }: { disabled: b
           <Plus /> Thêm
         </Button>
       </div>
-      <FieldError message={(errors.name ?? errors.tubePrice)?.message} />
+      <FieldError message={(errors.name ?? errors.tube_price)?.message} />
     </form>
   );
 }
@@ -132,7 +132,7 @@ export function SettingsShuttlecockEditForm({
       <Button type="button" variant="ghost" size="icon" aria-label="Hủy" title="Hủy" onClick={onCancel}>
         <X />
       </Button>
-      <FieldError message={(errors.name ?? errors.tubePrice)?.message} className="basis-full text-xs text-destructive" />
+      <FieldError message={(errors.name ?? errors.tube_price)?.message} className="basis-full text-xs text-destructive" />
     </form>
   );
 }

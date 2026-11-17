@@ -3,7 +3,7 @@
 import LoadingState from '@/components/common/LoadingState';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import type { TShuttlecock } from '@/types/shuttlecock.types';
+import type { TShuttlecock } from '@/types/shuttlecock.type';
 import { formatVND, SHUTTLES_PER_TUBE } from '@/utils/format';
 import { EyeOff, Feather, Pencil, Star } from 'lucide-react';
 import { SettingsShuttlecockAddForm, SettingsShuttlecockEditForm } from './components/SettingsShuttlecockForm';
@@ -49,13 +49,13 @@ export default function ShuttlecocksManager() {
         ) : (
           <ul className="divide-y">
             {shuttlecocks.map((shuttlecock: TShuttlecock) => {
-              const perShuttle: number = Math.round(shuttlecock.tubePrice / SHUTTLES_PER_TUBE);
+              const perShuttle: number = Math.round(shuttlecock.tube_price / SHUTTLES_PER_TUBE);
 
               return (
                 <li key={shuttlecock.id} className="flex flex-wrap items-center gap-2 py-2 sm:flex-nowrap">
                   {editingId === shuttlecock.id ? (
                     <SettingsShuttlecockEditForm
-                      initial={{ name: shuttlecock.name, tubePrice: shuttlecock.tubePrice }}
+                      initial={{ name: shuttlecock.name, tube_price: shuttlecock.tube_price }}
                       disabled={disabled}
                       onSubmit={(draft) => handleSaveEdit(shuttlecock, draft)}
                       onCancel={() => setEditingId(null)}
@@ -65,7 +65,7 @@ export default function ShuttlecocksManager() {
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
                           <p className="truncate font-semibold">{shuttlecock.name}</p>
-                          {shuttlecock.isDefault && (
+                          {shuttlecock.is_default && (
                             <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800 border border-amber-300">
                               <Star className="size-3 fill-amber-500 text-amber-500" /> Mặc định
                             </span>
@@ -74,11 +74,11 @@ export default function ShuttlecocksManager() {
                         <p className="flex items-center gap-1 text-xs text-muted-foreground">
                           <Feather className="size-3 shrink-0" />
                           <span>
-                            {formatVND(shuttlecock.tubePrice)}/ống ({formatVND(perShuttle)}/quả)
+                            {formatVND(shuttlecock.tube_price)}/ống ({formatVND(perShuttle)}/quả)
                           </span>
                         </p>
                       </div>
-                      {!shuttlecock.isDefault && (
+                      {!shuttlecock.is_default && (
                         <Button
                           variant="ghost"
                           size="icon"

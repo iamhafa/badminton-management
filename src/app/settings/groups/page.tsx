@@ -3,7 +3,7 @@
 import LoadingState from '@/components/common/LoadingState';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import type { TGroup } from '@/types/group.types';
+import type { TGroup } from '@/types/group.type';
 import { formatVND } from '@/utils/format';
 import { ChevronRight, EyeOff, MapPin, Plus, Users, Venus } from 'lucide-react';
 import Link from 'next/link';
@@ -11,7 +11,7 @@ import SettingsGroupForm from './components/SettingsGroupForm';
 import { useGroupsPage } from './hooks/useGroupsPage';
 import type { GroupDraft } from './schemas/group.schema';
 
-const NEW_GROUP_DRAFT: GroupDraft = { name: '', femaleCap: 50000, defaultCourtId: '' };
+const NEW_GROUP_DRAFT: GroupDraft = { name: '', female_cap: 50000, default_court_id: '' };
 
 export default function GroupsManager() {
   const {
@@ -80,8 +80,8 @@ export default function GroupsManager() {
       {groups.map((group: TGroup) => {
         const maleCount: number = group.members.filter((m) => m.gender === 'MALE').length;
         const femaleCount: number = group.members.length - maleCount;
-        const sessionCount: number = sessions.filter((s) => s.groupId === group.id).length;
-        const defaultCourt: string | undefined = courtName(group.defaultCourtId);
+        const sessionCount: number = sessions.filter((s) => s.group_id === group.id).length;
+        const defaultCourt: string | undefined = courtName(group.default_court_id);
 
         return (
           <Card key={group.id} size="sm" className="hover:border-emerald-400/80 transition-colors">
@@ -129,7 +129,7 @@ export default function GroupsManager() {
                 </span>
                 <span className="inline-flex items-center gap-1 shrink-0 text-[#be185d] font-medium">
                   <Venus className="size-3.5" />
-                  Trần nữ {formatVND(group.femaleCap)}
+                  Trần nữ {formatVND(group.female_cap)}
                 </span>
                 <span className="inline-flex items-start gap-1 text-gray-700">
                   <MapPin className="size-3.5 shrink-0 text-gray-500 mt-0.5" />

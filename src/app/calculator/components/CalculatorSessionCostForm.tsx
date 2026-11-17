@@ -5,11 +5,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
 import { Switch } from '@/components/ui/switch';
-import type { TCourt } from '@/types/court.types';
-import type { TGroup } from '@/types/group.types';
-import type { TPlayer } from '@/types/player.types';
-import type { TSessionInput } from '@/types/session.types';
-import type { TShuttlecock } from '@/types/shuttlecock.types';
+import type { TCourt } from '@/types/court.type';
+import type { TGroup } from '@/types/group.type';
+import type { TParticipant } from '@/types/player.type';
+import type { TSessionInput } from '@/types/session.type';
+import type { TShuttlecock } from '@/types/shuttlecock.type';
 import { getWeekdayVN } from '@/utils/date';
 import { formatVND, SHUTTLES_PER_TUBE } from '@/utils/format';
 import { cn } from 'cn';
@@ -24,19 +24,19 @@ const WATER_FEE_PRESETS: number[] = [35000, 40000, 50000];
 // Giữ nguyên nhóm, sân, loại cầu và ngày chơi; mức trần nữ và giá ống lấy theo nhóm / loại cầu đang chọn.
 const DEFAULT_INPUT_VALUES: Omit<
   TSessionInput,
-  'isoDate' | 'groupId' | 'courtId' | 'femaleCap' | 'shuttlecockId' | 'shuttleBrand' | 'tubePrice'
+  'iso_date' | 'group_id' | 'court_id' | 'female_cap' | 'shuttlecock_id' | 'shuttle_brand' | 'tube_price'
 > = {
-  hoursPlayed: 2,
-  courtFee: 280000,
-  shuttlesUsed: 5,
-  waterFee: 0,
-  waterPayerId: '',
+  hours_played: 2,
+  court_fee: 280000,
+  shuttles_used: 5,
+  water_fee: 0,
+  water_payer_id: null,
 };
 
 interface CalculatorSessionCostFormProps {
   input: TSessionInput;
   onChange: (patch: Partial<TSessionInput>) => void;
-  participants: TPlayer[];
+  participants: TParticipant[];
   /** Các nhóm đang dùng (chưa ẩn). */
   groups: TGroup[];
   /** Các sân đang dùng (chưa ẩn). */
@@ -61,25 +61,25 @@ export default function CalculatorSessionCostForm({
   waterEnabled,
   onWaterEnabledChange,
 }: CalculatorSessionCostFormProps) {
-  const shuttleUnit: number = input.tubePrice / SHUTTLES_PER_TUBE;
-  const shuttleTotalCost: number = shuttleUnit * input.shuttlesUsed;
-  const weekday: string = getWeekdayVN(input.isoDate);
-  const groupFemaleCap = groups.find((g) => g.id === input.groupId)?.femaleCap;
-  const selectedShuttlecock = shuttlecocks.find((s) => s.id === input.shuttlecockId);
+  const shuttleUnit: number = input.tube_price / SHUTTLES_PER_TUBE;
+  const shuttleTotalCost: number = shuttleUnit * input.shuttles_used;
+  const weekday: string = getWeekdayVN(input.iso_date);
+  const groupFemaleCap = groups.find((g) => g.id === input.group_id)?.female_cap;
+  const selectedShuttlecock = shuttlecocks.find((s) => s.id === input.shuttlecock_id);
 
   function handleReset() {
     onWaterEnabledChange(false);
     onChange({
       ...DEFAULT_INPUT_VALUES,
-      ...(groupFemaleCap ? { femaleCap: groupFemaleCap } : {}),
-      ...(selectedShuttlecock ? { tubePrice: selectedShuttlecock.tubePrice } : {}),
+      ...(groupFemaleCap ? { female_cap: groupFemaleCap } : {}),
+      ...(selectedShuttlecock ? { tube_price: selectedShuttlecock.tube_price } : {}),
     });
   }
 
   /** Chọn loại cầu: điền sẵn giá ống mặc định của loại đó, giá vẫn sửa được. */
   function handleShuttlecockChange(id: string) {
     const picked = shuttlecocks.find((s) => s.id === id);
-    onChange(picked ? { shuttlecockId: picked.id, tubePrice: picked.tubePrice } : { shuttlecockId: '' });
+    onChange(picked ? { shuttlecock_id: picked.id, tube_price: picked.tube_price } : { shuttlecock_id: null });
   }
 
   return (
@@ -117,14 +117,14 @@ export default function CalculatorSessionCostForm({
             <UsersRound className="pointer-events-none absolute left-3 top-1/2 z-10 size-4 -translate-y-1/2 text-gray-400" />
             <NativeSelect
               id="session-group"
-              value={input.groupId}
+              value={input.group_id ?? ''}
               onChange={(e: ChangeEvent<HTMLSelectElement>) => onGroupChange(e.target.value)}
               disabled={groups.length === 0}
               aria-required="true"
-              aria-invalid={!input.groupId}
+              aria-invalid={!input.group_id}
               className={cn(
                 'w-full [&_select]:h-10 [&_select]:pl-9 [&_select]:bg-white [&_select]:rounded-lg [&_select]:font-semibold',
-                input.groupId
+                input.group_id
                   ? '[&_select]:border-gray-200'
                   : '[&_select]:border-emerald-500 [&_select]:ring-2 [&_select]:ring-emerald-100',
               )}
@@ -151,7 +151,7 @@ export default function CalculatorSessionCostForm({
               ở Cài đặt để bắt đầu tính tiền.
             </p>
           ) : (
-            !input.groupId && (
+            !input.group_id && (
               <p className="text-[11px] font-semibold text-emerald-600">Chọn nhóm trước tiên để tải thông tin buổi chơi.</p>
             )
           )}
@@ -166,22 +166,22 @@ export default function CalculatorSessionCostForm({
             <MapPin className="pointer-events-none absolute left-3 top-1/2 z-10 size-4 -translate-y-1/2 text-gray-400" />
             <NativeSelect
               id="session-court"
-              value={input.courtId}
-              onChange={(e: ChangeEvent<HTMLSelectElement>) => onChange({ courtId: e.target.value })}
-              disabled={!input.groupId || courts.length === 0}
+              value={input.court_id ?? ''}
+              onChange={(e: ChangeEvent<HTMLSelectElement>) => onChange({ court_id: e.target.value || null })}
+              disabled={!input.group_id || courts.length === 0}
               aria-required="true"
-              aria-invalid={!input.courtId}
+              aria-invalid={!input.court_id}
               className={cn(
                 'w-full [&_select]:h-10 [&_select]:pl-9 [&_select]:bg-white [&_select]:rounded-lg [&_select]:font-semibold',
-                !input.groupId
+                !input.group_id
                   ? '[&_select]:bg-gray-50 [&_select]:border-gray-200 [&_select]:text-gray-400'
-                  : input.courtId
+                  : input.court_id
                     ? '[&_select]:border-gray-200'
                     : '[&_select]:border-amber-300',
               )}
             >
               <NativeSelectOption value="">
-                {!input.groupId ? '-- Vui lòng chọn nhóm trước --' : '-- Chọn sân --'}
+                {!input.group_id ? '-- Vui lòng chọn nhóm trước --' : '-- Chọn sân --'}
               </NativeSelectOption>
               {courts.map((court: TCourt) => (
                 <NativeSelectOption key={court.id} value={court.id}>
@@ -199,7 +199,7 @@ export default function CalculatorSessionCostForm({
               ở Cài đặt.
             </p>
           ) : (
-            input.groupId && !input.courtId && <p className="text-[11px] text-amber-600">Bắt buộc chọn sân để lưu buổi chơi.</p>
+            input.group_id && !input.court_id && <p className="text-[11px] text-amber-600">Bắt buộc chọn sân để lưu buổi chơi.</p>
           )}
         </div>
       </div>
@@ -214,8 +214,8 @@ export default function CalculatorSessionCostForm({
               <CalendarDays className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-gray-400" />
               <Input
                 type="date"
-                value={input.isoDate}
-                onChange={(e: ChangeEvent<HTMLInputElement>) => e.target.value && onChange({ isoDate: e.target.value })}
+                value={input.iso_date}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => e.target.value && onChange({ iso_date: e.target.value })}
                 className="pl-9 h-10 min-h-10 w-full appearance-none [-webkit-appearance:none] scheme-light font-semibold text-gray-800 rounded-lg border-gray-200"
               />
             </div>
@@ -233,18 +233,18 @@ export default function CalculatorSessionCostForm({
           <div className="flex h-10 items-center overflow-hidden rounded-lg border border-gray-200 bg-white">
             <button
               type="button"
-              onClick={() => onChange({ hoursPlayed: Math.max(0.5, input.hoursPlayed - 0.5) })}
+              onClick={() => onChange({ hours_played: Math.max(0.5, input.hours_played - 0.5) })}
               className="flex h-full w-10 shrink-0 items-center justify-center border-r border-gray-200 text-gray-500 hover:bg-gray-50 active:bg-gray-100 transition-colors"
             >
               <Minus className="size-3.5" />
             </button>
             <div className="flex flex-1 items-center justify-center gap-1.5">
-              <span className="text-base font-bold text-gray-900">{input.hoursPlayed}</span>
+              <span className="text-base font-bold text-gray-900">{input.hours_played}</span>
               <span className="text-xs text-gray-400">tiếng</span>
             </div>
             <button
               type="button"
-              onClick={() => onChange({ hoursPlayed: input.hoursPlayed + 0.5 })}
+              onClick={() => onChange({ hours_played: input.hours_played + 0.5 })}
               className="flex h-full w-10 shrink-0 items-center justify-center border-l border-gray-200 text-gray-500 hover:bg-gray-50 active:bg-gray-100 transition-colors"
             >
               <Plus className="size-3.5" />
@@ -261,8 +261,8 @@ export default function CalculatorSessionCostForm({
           <div className="relative">
             <Grid2X2 className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-gray-400" />
             <MoneyInput
-              value={input.courtFee}
-              onChange={(courtFee: number) => onChange({ courtFee })}
+              value={input.court_fee}
+              onChange={(court_fee: number) => onChange({ court_fee })}
               className="pl-9 pr-12 h-10 font-bold text-gray-900 rounded-lg border-gray-200"
             />
             <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-gray-400">
@@ -274,10 +274,10 @@ export default function CalculatorSessionCostForm({
               <button
                 key={preset}
                 type="button"
-                onClick={() => onChange({ courtFee: preset })}
+                onClick={() => onChange({ court_fee: preset })}
                 className={cn(
                   'rounded px-2.5 py-0.5 text-xs font-semibold border transition-all',
-                  input.courtFee === preset
+                  input.court_fee === preset
                     ? 'bg-[#dcfce7] border-[#16a34a] text-[#15803d]'
                     : 'bg-[#f1f5f9] border-transparent text-gray-600 hover:bg-gray-200',
                 )}
@@ -293,14 +293,14 @@ export default function CalculatorSessionCostForm({
           <Label className="text-[11px] font-bold uppercase tracking-wider text-[#db2777]">Mức trần ưu tiên nữ (tối đa)</Label>
           <div className="flex h-10 items-center gap-2 rounded-lg border border-pink-200 bg-pink-50/40 px-3">
             <Venus className="size-4 shrink-0 text-[#ec4899]" />
-            <span className="flex-1 font-bold">{input.groupId ? formatVND(input.femaleCap) : 'Chưa chọn nhóm'}</span>
-            {input.groupId && <span className="text-xs font-bold text-[#ec4899]">VNĐ/nữ</span>}
+            <span className="flex-1 font-bold">{input.group_id ? formatVND(input.female_cap) : 'Chưa chọn nhóm'}</span>
+            {input.group_id && <span className="text-xs font-bold text-[#ec4899]">VNĐ/nữ</span>}
           </div>
           <div className="flex flex-wrap items-center justify-between gap-1.5 mt-0.5">
             <span className="text-[10px] sm:text-[11px] text-gray-400 italic">
               Lấy từ thiết lập nhóm.{' '}
               <Link
-                href={input.groupId ? `/settings/groups/${input.groupId}?edit=1` : '/settings/groups'}
+                href={input.group_id ? `/settings/groups/${input.group_id}?edit=1` : '/settings/groups'}
                 className="font-semibold text-[#059669] underline not-italic"
               >
                 Đổi trong Cài đặt
@@ -328,27 +328,27 @@ export default function CalculatorSessionCostForm({
             </Label>
             <NativeSelect
               id="session-shuttlecock"
-              value={input.shuttlecockId}
+              value={input.shuttlecock_id ?? ''}
               onChange={(e: ChangeEvent<HTMLSelectElement>) => handleShuttlecockChange(e.target.value)}
-              disabled={!input.groupId || shuttlecocks.length === 0}
+              disabled={!input.group_id || shuttlecocks.length === 0}
               aria-required="true"
-              aria-invalid={!input.shuttlecockId}
+              aria-invalid={!input.shuttlecock_id}
               className={cn(
                 'w-full [&_select]:h-9 [&_select]:bg-white [&_select]:rounded-md [&_select]:font-medium',
-                !input.groupId
+                !input.group_id
                   ? '[&_select]:bg-gray-50 [&_select]:border-gray-200 [&_select]:text-gray-400'
-                  : input.shuttlecockId
+                  : input.shuttlecock_id
                     ? '[&_select]:border-gray-200'
                     : '[&_select]:border-amber-300',
               )}
             >
               <NativeSelectOption value="">
-                {!input.groupId ? '-- Vui lòng chọn nhóm trước --' : '-- Chọn loại cầu --'}
+                {!input.group_id ? '-- Vui lòng chọn nhóm trước --' : '-- Chọn loại cầu --'}
               </NativeSelectOption>
               {shuttlecocks.map((shuttlecock: TShuttlecock) => (
                 <NativeSelectOption key={shuttlecock.id} value={shuttlecock.id}>
                   {shuttlecock.name}
-                  {shuttlecock.isDefault ? ' (Mặc định)' : ''}
+                  {shuttlecock.is_default ? ' (Mặc định)' : ''}
                 </NativeSelectOption>
               ))}
             </NativeSelect>
@@ -361,7 +361,7 @@ export default function CalculatorSessionCostForm({
                 ở Cài đặt.
               </p>
             ) : (
-              !input.shuttlecockId && <p className="text-[11px] text-amber-600">Bắt buộc chọn loại cầu để lưu buổi chơi.</p>
+              !input.shuttlecock_id && <p className="text-[11px] text-amber-600">Bắt buộc chọn loại cầu để lưu buổi chơi.</p>
             )}
           </div>
 
@@ -370,8 +370,8 @@ export default function CalculatorSessionCostForm({
             <Label className="text-[11px] font-medium text-gray-600">Giá 1 ống ({SHUTTLES_PER_TUBE} quả)</Label>
             <div className="relative">
               <MoneyInput
-                value={input.tubePrice}
-                onChange={(tubePrice: number) => onChange({ tubePrice })}
+                value={input.tube_price}
+                onChange={(tube_price: number) => onChange({ tube_price })}
                 className="h-9 bg-white border-gray-200 pr-12 font-semibold text-gray-900"
               />
               <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-gray-400">đ/ống</span>
@@ -384,17 +384,17 @@ export default function CalculatorSessionCostForm({
             <div className="flex h-9 items-center overflow-hidden rounded-md border border-gray-200 bg-white">
               <button
                 type="button"
-                onClick={() => onChange({ shuttlesUsed: Math.max(0, input.shuttlesUsed - 1) })}
+                onClick={() => onChange({ shuttles_used: Math.max(0, input.shuttles_used - 1) })}
                 className="flex h-full w-9 shrink-0 items-center justify-center border-r border-gray-200 text-gray-500 hover:bg-gray-50 active:bg-gray-100"
               >
                 <Minus className="size-3.5" />
               </button>
               <div className="flex flex-1 items-center justify-center">
-                <span className="text-sm font-bold text-[#b45309]">{input.shuttlesUsed}</span>
+                <span className="text-sm font-bold text-[#b45309]">{input.shuttles_used}</span>
               </div>
               <button
                 type="button"
-                onClick={() => onChange({ shuttlesUsed: input.shuttlesUsed + 1 })}
+                onClick={() => onChange({ shuttles_used: input.shuttles_used + 1 })}
                 className="flex h-full w-9 shrink-0 items-center justify-center border-l border-gray-200 text-gray-500 hover:bg-gray-50 active:bg-gray-100"
               >
                 <Plus className="size-3.5" />
@@ -405,7 +405,7 @@ export default function CalculatorSessionCostForm({
 
         <div className="flex items-center justify-between border-t border-[#fde68a]/70 pt-2 text-xs">
           <span className="text-gray-500">
-            Đơn giá: {formatVND(shuttleUnit)}/quả × {input.shuttlesUsed} quả
+            Đơn giá: {formatVND(shuttleUnit)}/quả × {input.shuttles_used} quả
           </span>
           <span className="font-bold text-[#b45309] text-sm">= {formatVND(shuttleTotalCost)}</span>
         </div>
@@ -430,7 +430,7 @@ export default function CalculatorSessionCostForm({
 
         {waterEnabled && (
           <>
-            {input.waterFee === 0 && (
+            {input.water_fee === 0 && (
               <p className="text-[11px] font-semibold text-red-600">Bắt buộc nhập số tiền nước khi bật tính tiền nước.</p>
             )}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -439,12 +439,12 @@ export default function CalculatorSessionCostForm({
                 <Label className="text-[11px] font-medium text-gray-600">Số tiền</Label>
                 <div className="relative">
                   <MoneyInput
-                    value={input.waterFee}
-                    onChange={(waterFee: number) => onChange({ waterFee })}
-                    aria-invalid={input.waterFee === 0 || undefined}
+                    value={input.water_fee}
+                    onChange={(water_fee: number) => onChange({ water_fee })}
+                    aria-invalid={input.water_fee === 0 || undefined}
                     className={cn(
                       'h-10 bg-white pr-12 font-bold text-gray-900 rounded-lg',
-                      input.waterFee === 0 ? 'border-red-300' : 'border-gray-200',
+                      input.water_fee === 0 ? 'border-red-300' : 'border-gray-200',
                     )}
                   />
                   <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-gray-400">
@@ -456,10 +456,10 @@ export default function CalculatorSessionCostForm({
                     <button
                       key={preset}
                       type="button"
-                      onClick={() => onChange({ waterFee: preset })}
+                      onClick={() => onChange({ water_fee: preset })}
                       className={cn(
                         'rounded px-2.5 py-0.5 text-xs font-semibold border transition-all',
-                        input.waterFee === preset
+                        input.water_fee === preset
                           ? 'bg-[#dbeafe] border-[#3b82f6] text-[#1d4ed8]'
                           : 'bg-white border-gray-200 text-gray-600 hover:bg-blue-50',
                       )}
@@ -474,14 +474,14 @@ export default function CalculatorSessionCostForm({
               <div className="flex flex-col gap-1.5">
                 <Label className="text-[11px] font-medium text-gray-600">Người mua nước</Label>
                 <NativeSelect
-                  value={input.waterPayerId}
-                  onChange={(e) => onChange({ waterPayerId: e.target.value })}
+                  value={input.water_payer_id ?? ''}
+                  onChange={(e) => onChange({ water_payer_id: e.target.value || null })}
                   className="w-full [&_select]:h-10 [&_select]:bg-white [&_select]:border-gray-200 [&_select]:rounded-lg"
                 >
                   {participants.length === 0 ? (
                     <NativeSelectOption value="">Chưa có người chơi nào được chọn</NativeSelectOption>
                   ) : (
-                    participants.map((participant: TPlayer) => {
+                    participants.map((participant: TParticipant) => {
                       const roleTag =
                         participant.role === 'LEADER'
                           ? ' (Trưởng nhóm)'
@@ -503,17 +503,17 @@ export default function CalculatorSessionCostForm({
               </div>
             </div>
 
-            {input.waterFee > 0 && participants.length > 0 && (
+            {input.water_fee > 0 && participants.length > 0 && (
               <div className="flex items-center justify-between border-t border-blue-200/70 pt-2 text-xs text-blue-900 font-medium">
                 <span>
-                  Chia cho <strong>{participants.filter((p) => p.drinksWater !== false).length}</strong> / {participants.length}{' '}
-                  người có uống nước
+                  Chia cho <strong>{participants.filter((p) => p.drinks_water).length}</strong> / {participants.length} người có
+                  uống nước
                 </span>
                 <span className="font-bold text-blue-700">
                   ~
                   {formatVND(
-                    participants.filter((participant) => participant.drinksWater !== false).length > 0
-                      ? input.waterFee / participants.filter((participant) => participant.drinksWater !== false).length
+                    participants.filter((participant) => participant.drinks_water).length > 0
+                      ? input.water_fee / participants.filter((participant) => participant.drinks_water).length
                       : 0,
                   )}
                   /người

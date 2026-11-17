@@ -4,8 +4,8 @@ import { useMutateSaveCourt, useQueryCourts } from '@/hooks/useQueryCourts';
 import { useQueryGroups } from '@/hooks/useQueryGroups';
 import { confirm } from '@/stores/confirm.store';
 import { ConnectionState, useConnectionStore } from '@/stores/connection.store';
-import type { TCourt } from '@/types/court.types';
-import type { TGroup } from '@/types/group.types';
+import type { TCourt } from '@/types/court.type';
+import type { TGroup } from '@/types/group.type';
 import { nowIso } from '@/utils/date';
 import { useState } from 'react';
 import { toast } from 'sonner';
@@ -33,7 +33,7 @@ export function useCourtsPage() {
 
   /** Các nhóm đang dùng sân này làm sân mặc định. */
   function groupsUsing(courtId: string): TGroup[] {
-    return groups.filter((g) => g.defaultCourtId === courtId);
+    return groups.filter((g) => g.default_court_id === courtId);
   }
 
   async function handleAdd(values: CourtDraft): Promise<string | null> {
@@ -48,9 +48,9 @@ export function useCourtsPage() {
       id: crypto.randomUUID(),
       name,
       address: values.address.trim(),
-      createdAt: now,
-      updatedAt: now,
-      deletedAt: null,
+      created_at: now,
+      updated_at: now,
+      deleted_at: null,
     };
     try {
       await saveCourt(newCourt);
@@ -68,7 +68,7 @@ export function useCourtsPage() {
       return `Sân "${name}" đã có trong danh sách.`;
     }
 
-    const updated: TCourt = { ...court, name, address: values.address.trim(), updatedAt: nowIso() };
+    const updated: TCourt = { ...court, name, address: values.address.trim(), updated_at: nowIso() };
     try {
       await saveCourt(updated);
       setEditingId(null);
@@ -90,7 +90,7 @@ export function useCourtsPage() {
       destructive: true,
     });
     if (!ok) return;
-    const updated: TCourt = { ...court, deletedAt: nowIso(), updatedAt: nowIso() };
+    const updated: TCourt = { ...court, deleted_at: nowIso(), updated_at: nowIso() };
     try {
       await saveCourt(updated);
       toast.success(`Đã ẩn sân "${court.name}"`);

@@ -51,8 +51,8 @@ export default function GroupDetailPage() {
 
   const maleCount: number = group.members.filter((m) => m.gender === 'MALE').length;
   const femaleCount: number = group.members.length - maleCount;
-  const sessionCount: number = sessions.filter((s) => s.groupId === group.id).length;
-  const defaultCourt = courtName(group.defaultCourtId);
+  const sessionCount: number = sessions.filter((s) => s.group_id === group.id).length;
+  const defaultCourt = courtName(group.default_court_id);
 
   return (
     <div className="flex flex-col gap-4">
@@ -110,7 +110,7 @@ export default function GroupDetailPage() {
             </span>
             <span className="inline-flex items-center gap-1 shrink-0 text-[#be185d] font-medium">
               <Venus className="size-3.5" />
-              Trần nữ {formatVND(group.femaleCap)}
+              Trần nữ {formatVND(group.female_cap)}
             </span>
             <span className="inline-flex items-start gap-1 text-gray-700">
               <MapPin className="size-3.5 shrink-0 text-gray-500 mt-0.5" />
@@ -126,8 +126,8 @@ export default function GroupDetailPage() {
               <SettingsGroupForm
                 initial={{
                   name: group.name,
-                  femaleCap: group.femaleCap,
-                  defaultCourtId: group.defaultCourtId,
+                  female_cap: group.female_cap,
+                  default_court_id: group.default_court_id ?? '',
                 }}
                 courts={courts}
                 submitLabel="Lưu thay đổi"
