@@ -9,10 +9,13 @@ export class SessionApi extends SupabaseClientApi {
       .from('sessions')
       .select('*, session_players(*)')
       .order('created_at', { ascending: false })
-      .order('position', { referencedTable: 'session_players', ascending: true });
+      .order('position', {
+        referencedTable: 'session_players',
+        ascending: true,
+      });
     if (error) throw error;
     // Các cột enum (gender, paid_method...) đã được database kiểm tra bằng `check`, chỉ thu hẹp kiểu.
-    return (data ?? []) as TSession[];
+    return data as TSession[];
   }
 
   /**
@@ -21,9 +24,14 @@ export class SessionApi extends SupabaseClientApi {
    */
   static async save({ session_players, ...session }: TSessionDraft): Promise<string> {
     const players = session_players.map((player, position) => ({ ...player, position }));
-    const { data, error } = await this.database.rpc('save_session', { p_session: session, p_players: players });
+
+    const { data, error } = await this.database.rpc('save_session', {
+      p_session: session,
+      p_players: players,
+    });
     if (error) throw error;
-    return data as string;
+
+    return data;
   }
 
   /** Xóa 1 buổi chơi; người chơi của buổi đó tự bị xóa theo (`on delete cascade`). */
@@ -43,11 +51,16 @@ export class SessionApi extends SupabaseClientApi {
     paidAt: string | null,
   ): Promise<void> {
     if (playerIds.length === 0) return;
+
     const { error } = await this.database
       .from('session_players')
-      .update({ paid_method: method, paid_at: method ? paidAt : null })
+      .update({
+        paid_method: method,
+        paid_at: method ? paidAt : null,
+      })
       .eq('session_id', sessionId)
       .in('player_id', playerIds);
+
     if (error) throw error;
   }
 }

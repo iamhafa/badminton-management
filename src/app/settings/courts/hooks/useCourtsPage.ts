@@ -1,6 +1,5 @@
 'use client';
-
-import { useMutateSaveCourt, useQueryCourts } from '@/hooks/useQueryCourts';
+import { useMutateDeleteCourt, useMutateSaveCourt, useQueryCourts } from '@/hooks/useQueryCourts';
 import { useQueryGroups } from '@/hooks/useQueryGroups';
 import { confirm } from '@/stores/confirm.store';
 import { ConnectionState, useConnectionStore } from '@/stores/connection.store';
@@ -10,39 +9,45 @@ import { nowIso } from '@/utils/date';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import type { CourtDraft } from '../schemas/court.schema';
-
 /** State và thao tác của trang Sân cầu lông. `page.tsx` chỉ lo hiển thị. */
 export function useCourtsPage() {
   const cloudIsOnline: boolean = useConnectionStore((state: ConnectionState) => state.cloudStatus === 'online');
   const { data: courts, isPending: loadingCourts, error: courtsError } = useQueryCourts();
   const { data: groups, isPending: loadingGroups, error: groupsError } = useQueryGroups();
-  const { mutateAsync: saveCourt, isPending: savingCourt } = useMutateSaveCourt();
-
-  const loading: boolean = loadingCourts || loadingGroups || savingCourt;
+  const { mutateAsync: saveCourt } = useMutateSaveCourt();
+  const { mutateAsync: deleteCourt } = useMutateDeleteCourt();
+  const loading: boolean = loadingCourts || loadingGroups;
   const loadError = courtsError ?? groupsError;
   const loadErrorMessage = loadError
     ? `Không tải được danh sách sân: ${loadError instanceof Error ? loadError.message : String(loadError)}`
     : null;
-  const [editingId, setEditingId] = useState<string | null>(null);
+  /** Mỗi lúc chỉ mở 1 form: `'new'` = form thêm sân, id = form sửa sân đó, null = không mở form nào. */
+  const [formTarget, setFormTarget] = useState<'new' | string | null>(null);
+  const creating: boolean = formTarget === 'new';
+  const editingId: string | null = formTarget === 'new' ? null : formTarget;
   const disabled: boolean = !cloudIsOnline;
-
+  function openCreating(): void {
+    setFormTarget('new');
+  }
+  function openEditing(id: string): void {
+    setFormTarget(id);
+  }
+  function closeForm(): void {
+    setFormTarget(null);
+  }
   function findDuplicate(name: string, exceptId?: string): TCourt | undefined {
     const key: string = name.trim().toLowerCase();
     return courts.find((v) => v.id !== exceptId && v.name.trim().toLowerCase() === key);
   }
-
   /** Các nhóm đang dùng sân này làm sân mặc định. */
   function groupsUsing(courtId: string): TGroup[] {
     return groups.filter((g) => g.default_court_id === courtId);
   }
-
   async function handleAdd(values: CourtDraft): Promise<string | null> {
     const name: string = values.name.trim();
-
     if (findDuplicate(name)) {
       return `Sân "${name}" đã có trong danh sách.`;
     }
-
     const now: string = nowIso();
     const newCourt: TCourt = {
       id: crypto.randomUUID(),
@@ -54,62 +59,63 @@ export function useCourtsPage() {
     };
     try {
       await saveCourt(newCourt);
+      closeForm();
       toast.success(`Đã thêm sân "${name}"`);
       return null;
     } catch (err) {
       return `Lưu thất bại: ${err instanceof Error ? err.message : String(err)}`;
     }
   }
-
   async function handleSaveEdit(court: TCourt, values: CourtDraft): Promise<string | null> {
     const name: string = values.name.trim();
-
     if (findDuplicate(name, court.id)) {
       return `Sân "${name}" đã có trong danh sách.`;
     }
-
     const updated: TCourt = { ...court, name, address: values.address.trim(), updated_at: nowIso() };
     try {
       await saveCourt(updated);
-      setEditingId(null);
+      closeForm();
       toast.success(`Đã cập nhật sân "${name}"`);
       return null;
     } catch (err) {
       return `Lưu thất bại: ${err instanceof Error ? err.message : String(err)}`;
     }
   }
-
-  async function handleHide(court: TCourt): Promise<void> {
+  async function handleDelete(court: TCourt): Promise<void> {
     const using: TGroup[] = groupsUsing(court.id);
     const usingNote: string =
-      using.length > 0 ? ` Sân đang là sân mặc định của nhóm ${using.map((g) => `"${g.name}"`).join(', ')}.` : '';
+      using.length > 0
+        ? ` Nhóm ${using.map((g) => `"${g.name}"`).join(', ')} đang dùng sân này làm sân mặc định sẽ chuyển về "chưa chọn sân".`
+        : '';
     const ok: boolean = await confirm({
-      title: `Ẩn sân "${court.name}"?`,
-      description: `Sân sẽ không còn hiện khi tính tiền. Lịch sử các buổi đã chơi ở sân này vẫn giữ nguyên, và bạn có thể khôi phục sân bất cứ lúc nào.${usingNote}`,
-      confirmLabel: 'Ẩn sân',
+      title: `Xóa sân "${court.name}"?`,
+      description: `Sân sẽ bị xóa vĩnh viễn và không khôi phục được. Các buổi chơi đã lưu vẫn giữ nguyên tên sân.${usingNote}`,
+      confirmLabel: 'Xóa sân',
       destructive: true,
     });
     if (!ok) return;
-    const updated: TCourt = { ...court, deleted_at: nowIso(), updated_at: nowIso() };
     try {
-      await saveCourt(updated);
-      toast.success(`Đã ẩn sân "${court.name}"`);
+      await deleteCourt(court.id);
+      if (editingId === court.id) closeForm();
+      toast.success(`Đã xóa sân "${court.name}"`);
     } catch (err) {
-      toast.error(`Ẩn thất bại: ${err instanceof Error ? err.message : String(err)}`);
+      toast.error(`Xóa thất bại: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
-
   return {
     courts,
     cloudIsOnline,
     disabled,
     loading,
     loadErrorMessage,
+    creating,
     editingId,
-    setEditingId,
+    openCreating,
+    openEditing,
+    closeForm,
     groupsUsing,
     handleAdd,
     handleSaveEdit,
-    handleHide,
+    handleDelete,
   };
 }

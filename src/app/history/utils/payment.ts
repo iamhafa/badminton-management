@@ -1,17 +1,11 @@
-import type { TPaymentMethod, TSession, TSessionPlayer } from '@/types/session.type';
+import type { TSession, TSessionPlayer } from '@/types/session.type';
 import { format, isValid, parseISO } from 'date-fns';
 
 // Các hàm thuần về tình trạng chuyển tiền của 1 buổi chơi.
 // Quy ước theo số tiền đã làm tròn của từng người (`rounded_payable`):
 // > 0: phải chuyển tiền; < 0: được hoàn tiền (VD: người ứng tiền nước); = 0: không cần làm gì.
 // Trạng thái chuyển tiền nằm ngay trên từng người: `paid_method` / `paid_at` (null = chưa chuyển).
-
-export const PAYMENT_METHODS: TPaymentMethod[] = ['TRANSFER', 'CASH'];
-
-export const PAYMENT_METHOD_LABELS: Record<TPaymentMethod, { short: string; long: string }> = {
-  TRANSFER: { short: 'CK', long: 'Chuyển khoản' },
-  CASH: { short: 'TM', long: 'Tiền mặt' },
-};
+// Giao diện chỉ ghi 'TRANSFER' (mọi khoản thu đều là chuyển khoản); 'CASH' chỉ còn ở dữ liệu cũ.
 
 export type TPaymentSummary = {
   /** Số người cần chuyển hoặc được hoàn (số tiền khác 0). */

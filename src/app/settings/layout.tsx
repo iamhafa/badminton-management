@@ -30,11 +30,12 @@ export default function SettingsLayout({ children }: { children: ReactNode }) {
               key={href}
               href={href}
               className={cn(
-                'flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors',
+                // Mobile: icon nằm trên chữ để nhãn không bị xuống dòng; từ `sm` trở lên xếp ngang.
+                'flex flex-1 flex-col items-center justify-center gap-1 whitespace-nowrap rounded-md px-2 py-1.5 text-xs font-semibold transition-colors sm:flex-row sm:gap-1.5 sm:px-3',
                 isActive ? 'bg-[#0a6c44] text-white shadow-xs' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900',
               )}
             >
-              <Icon className="size-3.5 shrink-0" />
+              <Icon className="size-4 shrink-0 sm:size-3.5" />
               {label}
             </Link>
           );

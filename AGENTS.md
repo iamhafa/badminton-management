@@ -23,7 +23,7 @@ src/
 │   ├── layout.tsx                          # Root layout (QueryProvider, HeaderLayout, ConfirmDialog, Toaster)
 │   ├── loading.tsx, error.tsx, global-error.tsx, not-found.tsx
 │   ├── calculator/                         # /calculator: components/, hooks/, schemas/, utils/, page.tsx
-│   ├── history/                            # /history: components/, page.tsx
+│   ├── history/                            # /history: components/, hooks/, utils/, page.tsx
 │   └── settings/                           # /settings/*
 │       ├── layout.tsx                      # Settings tab bar (inline, Client Component)
 │       ├── courts/                         # components/, hooks/, schemas/, page.tsx
@@ -38,11 +38,10 @@ src/
 │   └── ui/                                 # shadcn/ui primitives (@base-ui/react) — DO NOT EDIT DIRECTLY
 │
 ├── hooks/                                  # Shared TanStack Query hooks (useQuery*, useMutate*)
-├── libs/supabase/                          # Data access layer only: supabase.client.ts, database.types.ts, api/
+├── libs/supabase/                          # Data access layer only: client/supabase.client.ts, types/database.type.ts, api/
 ├── stores/                                 # Zustand UI stores: confirm.store, connection.store
 ├── styles/                                 # globals.css (Tailwind CSS v4)
-├── (root) supabase/migrations/             # SQL: tables, check constraints, rpc functions, RLS policies
-├── types/                                  # Domain types (*.types.ts)
+├── types/                                  # Domain types (*.type.ts)
 └── utils/                                  # Pure helpers: date.ts, format.ts
 ```
 
@@ -54,22 +53,23 @@ src/
    - Routes must not import from each other (e.g. `app/calculator` must not import from `app/settings`). Shared code must not import from `src/app/`.
 
 2. **`page.tsx` is UI only**:
-   - Page state and handlers live in a route hook: `app/calculator/hooks/useCalculator.ts`, `app/settings/<tab>/hooks/use<Tab>Page.ts` (`useCourtsPage`, `useShuttlecocksPage`, `useGroupsPage`, `useGroupDetailPage`).
+   - `page.tsx` holds the screen's main layout and JSX. Do not wrap the whole screen in one big component (e.g. a `HistoryList` rendered alone by the page); `components/` only holds smaller pieces (cards, forms, headers, empty states).
+   - Page state and handlers live in a route hook: `app/calculator/hooks/useCalculator.ts`, `app/settings/<tab>/hooks/use<Tab>Page.ts` (`useCourtsPage`, `useShuttlecocksPage`, `useGroupsPage`, `useGroupDetailPage`), `app/history/hooks/useHistoryPage.ts`.
    - Pure calculations live in the route's `utils/` (e.g. `app/calculator/utils/bill.ts` for `calculateBill`). No React there.
 
 3. **Component naming**:
    - Every component file under `src/app/` is prefixed with its top-level screen name, so it is easy to find and never collides with shared components:
      - `/calculator` -> `Calculator*` (`CalculatorBillSummaryCard`, `CalculatorSessionCostForm`, ...)
-     - `/history` -> `History*` (`HistoryList`)
+     - `/history` -> `History*` (`HistorySessionCard`, `HistoryPaymentControl`, ...)
      - `/settings/*` -> `Settings<Entity>*` (`SettingsCourtForm`, `SettingsGroupForm`, `SettingsGroupMemberForm`, `SettingsGroupRosterManager`, `SettingsShuttlecockForm`)
    - Named exports follow the same prefix (`SettingsCourtAddForm`, `SettingsCourtEditForm`, ...).
    - New route components must follow this prefix rule.
 
 4. **Data model = database (no mapper)**:
-   - The database is **Supabase (Postgres)**. Tables and functions are defined in `supabase/migrations/*.sql`.
-   - App types use the database rows directly (snake_case, `null` for empty): `src/types/*.types.ts` only alias `Tables<'...'>` from `src/libs/supabase/database.types.ts` and narrow enum columns (`gender`, `role`, `paid_method`...). Do not add mapper functions that rename fields.
+   - The database is **Supabase (Postgres)**. The schema (tables, check constraints, rpc functions, RLS policies) is managed directly in the Supabase Dashboard; the repo has no `supabase/migrations/`. Read `src/libs/supabase/types/database.type.ts` to see the current tables and functions.
+   - App types use the database rows directly (snake_case, `null` for empty): `src/types/*.type.ts` only alias `Tables<'...'>` from `src/libs/supabase/types/database.type.ts` and narrow enum columns (`gender`, `role`, `paid_method`...). Do not add mapper functions that rename fields.
    - Form schemas in `src/app/<route>/schemas/` use column names too (`female_cap`, `tube_price`). Form-only quirks (a `<select>` uses `''` for "none") are converted to `null` right where the row is built.
-   - `database.types.ts` is generated: after changing a table, run `pnpm db:types` (needs `npx supabase login` once). Never edit it by hand.
+   - `database.type.ts` is generated: after changing a table in the Dashboard, run `pnpm db:types` (needs `npx supabase login` once). Never edit it by hand.
 
 5. **`src/libs/`**:
    - Only external service integrations: the Supabase client and the class APIs `CourtApi`, `GroupApi`, `SessionApi`, `ShuttlecockApi` (`src/libs/supabase/`).

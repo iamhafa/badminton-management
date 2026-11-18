@@ -1,18 +1,15 @@
 import { ShuttlecockApi } from '@/libs/supabase';
 import type { TShuttlecock } from '@/types/shuttlecock.type';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-
-/** Lấy toàn bộ danh sách loại cầu (chỉ active). */
+/** Lấy toàn bộ danh sách loại cầu. */
 export function useQueryShuttlecocks() {
   return useQuery<TShuttlecock[], Error, TShuttlecock[]>({
     queryKey: ['shuttlecocks'],
     queryFn: () => ShuttlecockApi.fetchAll(),
     initialData: [],
     initialDataUpdatedAt: 0,
-    select: (shuttlecocks: TShuttlecock[]) => shuttlecocks.filter((shuttlecock: TShuttlecock) => !shuttlecock.deleted_at),
   });
 }
-
 /** Tạo mới hoặc ghi đè 1 loại cầu, rồi tải lại danh sách loại cầu. */
 export function useMutateShuttlecock() {
   const queryClient = useQueryClient();
@@ -21,12 +18,23 @@ export function useMutateShuttlecock() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['shuttlecocks'] }),
   });
 }
-
 /** Đặt 1 loại cầu làm mặc định, rồi tải lại danh sách loại cầu. */
 export function useMutateSetDefaultShuttlecock() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => ShuttlecockApi.setDefault(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['shuttlecocks'] }),
+  });
+}
+/** Xóa hẳn 1 loại cầu. Database tự bỏ liên kết ở buổi chơi (`set null`), nên tải lại cả lịch sử. */
+export function useMutateDeleteShuttlecock() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => ShuttlecockApi.delete(id),
+    onSuccess: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['shuttlecocks'] }),
+        queryClient.invalidateQueries({ queryKey: ['sessions'] }),
+      ]),
   });
 }

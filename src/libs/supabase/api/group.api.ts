@@ -9,10 +9,14 @@ export class GroupApi extends SupabaseClientApi {
       .from('groups')
       .select('*, members(*)')
       .order('created_at', { ascending: true })
-      .order('position', { referencedTable: 'members', ascending: true });
+      .order('position', {
+        referencedTable: 'members',
+        ascending: true,
+      });
     if (error) throw error;
+
     // `gender` / `role` của thành viên đã được database kiểm tra bằng `check`, chỉ thu hẹp kiểu.
-    return (data ?? []) as TGroup[];
+    return data as TGroup[];
   }
 
   /**
@@ -20,7 +24,10 @@ export class GroupApi extends SupabaseClientApi {
    * Thành viên không còn trong danh sách sẽ bị xóa khỏi nhóm; lịch sử buổi chơi không bị ảnh hưởng.
    */
   static async save({ members, ...group }: TGroupSave): Promise<void> {
-    const { error } = await this.database.rpc('save_group', { p_group: group, p_members: members });
+    const { error } = await this.database.rpc('save_group', {
+      p_group: group,
+      p_members: members,
+    });
     if (error) throw error;
   }
 }

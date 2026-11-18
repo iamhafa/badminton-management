@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import type { Gender } from '@/types/player.type';
-import type { TPaymentMethod, TSession, TSessionPlayer } from '@/types/session.type';
+import type { TSession, TSessionPlayer } from '@/types/session.type';
 import { formatDateTimeVN } from '@/utils/date';
 import { describePayable, formatVND } from '@/utils/format';
 import { countPlayers } from '@/utils/session';
@@ -36,8 +36,8 @@ interface HistorySessionCardProps {
   deleting: boolean;
   cloudOnline: boolean;
   onDelete: () => void;
-  /** Đánh dấu 1 người đã chuyển bằng `method`, hoặc `null` để bỏ đánh dấu. */
-  onSetPayment: (playerId: string, method: TPaymentMethod | null) => void;
+  /** Đánh dấu 1 người đã thu (`true`) hoặc bỏ đánh dấu (`false`). */
+  onSetPayment: (playerId: string, paid: boolean) => void;
   /** Đánh dấu mọi người còn lại là đã chuyển (chuyển khoản). */
   onMarkAllPaid: () => void;
 }
@@ -122,7 +122,7 @@ export default function HistorySessionCard({
                   disabled={paymentDisabled}
                   className="border-emerald-300 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800"
                 >
-                  <CheckCheck /> Đánh dấu tất cả đã chuyển (CK)
+                  <CheckCheck /> Đánh dấu tất cả đã thu
                 </Button>
               )}
               <Button
@@ -257,7 +257,7 @@ interface PlayerColumnProps {
   players: TSessionPlayer[];
   bill: TSession;
   paymentDisabled: boolean;
-  onSetPayment: (playerId: string, method: TPaymentMethod | null) => void;
+  onSetPayment: (playerId: string, paid: boolean) => void;
 }
 
 /** Danh sách người chơi của 1 giới tính, số tiền và trạng thái chuyển tiền của từng người. */
@@ -323,11 +323,7 @@ function PlayerColumn({ gender, players, bill, paymentDisabled, onSetPayment }: 
               >
                 {describePayable(p.rounded_payable)}
               </span>
-              <HistoryPaymentControl
-                player={p}
-                disabled={paymentDisabled}
-                onChange={(method) => onSetPayment(p.player_id, method)}
-              />
+              <HistoryPaymentControl player={p} disabled={paymentDisabled} onChange={(paid) => onSetPayment(p.player_id, paid)} />
             </li>
           );
         })}

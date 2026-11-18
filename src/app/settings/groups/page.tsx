@@ -44,7 +44,7 @@ export default function GroupsManager() {
             </CardAction>
           )}
         </CardHeader>
-        <CardContent className="flex flex-col gap-3">
+        <CardContent className="flex flex-col gap-3 empty:hidden">
           {!cloudOnline && <p className="text-xs text-destructive">Chưa kết nối Cloud nên không thể chỉnh sửa.</p>}
           {loadErrorMessage && <p className="text-xs text-destructive">{loadErrorMessage}</p>}
           {courts.length === 0 && !loading && (
@@ -76,71 +76,79 @@ export default function GroupsManager() {
         </CardContent>
       </Card>
 
-      {/* Danh sách các nhóm: chỉ hiển thị tóm tắt, click vào nhóm để vào trang chi tiết */}
-      {groups.map((group: TGroup) => {
-        const maleCount: number = group.members.filter((m) => m.gender === 'MALE').length;
-        const femaleCount: number = group.members.length - maleCount;
-        const sessionCount: number = sessions.filter((s) => s.group_id === group.id).length;
-        const defaultCourt: string | undefined = courtName(group.default_court_id);
+      {/* Danh sách các nhóm: gom trong 1 card, ngăn bằng đường kẻ. Chỉ hiển thị tóm tắt, click vào nhóm để vào trang chi tiết */}
+      {groups.length > 0 && (
+        <Card size="sm">
+          <CardContent>
+            <ul className="divide-y">
+              {groups.map((group: TGroup) => {
+                const maleCount: number = group.members.filter((m) => m.gender === 'MALE').length;
+                const femaleCount: number = group.members.length - maleCount;
+                const sessionCount: number = sessions.filter((s) => s.group_id === group.id).length;
+                const defaultCourt: string | undefined = courtName(group.default_court_id);
 
-        return (
-          <Card key={group.id} size="sm" className="hover:border-emerald-400/80 transition-colors">
-            <CardHeader className="flex flex-col gap-2">
-              <div className="flex items-center justify-between gap-2">
-                <CardTitle className="text-base">
-                  <Link
-                    href={`/settings/groups/${group.id}`}
-                    className="hover:text-emerald-700 hover:underline inline-flex items-center gap-1.5"
-                  >
-                    {group.name}
-                  </Link>
-                </CardTitle>
-                <div className="flex items-center gap-1 shrink-0">
-                  <Link
-                    href={`/settings/groups/${group.id}`}
-                    className={buttonVariants({
-                      variant: 'outline',
-                      size: 'sm',
-                      className:
-                        'gap-1 text-xs font-semibold text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50 h-7 px-2',
-                    })}
-                  >
-                    Chi tiết
-                    <ChevronRight className="size-3.5" />
-                  </Link>
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label="Ẩn nhóm"
-                    title="Ẩn nhóm"
-                    onClick={() => handleHide(group)}
-                    disabled={disabled}
-                    className="text-muted-foreground hover:text-destructive size-7"
-                  >
-                    <EyeOff className="size-3.5" />
-                  </Button>
-                </div>
-              </div>
+                return (
+                  <li key={group.id} className="py-3 first:pt-0 last:pb-0">
+                    <CardHeader className="flex flex-col items-stretch gap-2 px-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <CardTitle className="text-base">
+                          <Link
+                            href={`/settings/groups/${group.id}`}
+                            className="hover:text-emerald-700 hover:underline inline-flex items-center gap-1.5"
+                          >
+                            {group.name}
+                          </Link>
+                        </CardTitle>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <Link
+                            href={`/settings/groups/${group.id}`}
+                            className={buttonVariants({
+                              variant: 'outline',
+                              size: 'sm',
+                              className:
+                                'gap-1 text-xs font-semibold text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50 h-7 px-2',
+                            })}
+                          >
+                            Chi tiết
+                            <ChevronRight className="size-3.5" />
+                          </Link>
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            aria-label="Ẩn nhóm"
+                            title="Ẩn nhóm"
+                            onClick={() => handleHide(group)}
+                            disabled={disabled}
+                            className="text-muted-foreground hover:text-destructive size-7"
+                          >
+                            <EyeOff className="size-3.5" />
+                          </Button>
+                        </div>
+                      </div>
 
-              <CardDescription className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs">
-                <span className="inline-flex items-center gap-1 shrink-0">
-                  <Users className="size-3.5 text-emerald-600" />
-                  {group.members.length} người ({maleCount} nam, {femaleCount} nữ)
-                </span>
-                <span className="inline-flex items-center gap-1 shrink-0 text-[#be185d] font-medium">
-                  <Venus className="size-3.5" />
-                  Trần nữ {formatVND(group.female_cap)}
-                </span>
-                <span className="inline-flex items-start gap-1 text-gray-700">
-                  <MapPin className="size-3.5 shrink-0 text-gray-500 mt-0.5" />
-                  <span className="wrap-break-word">{defaultCourt ?? 'Chưa chọn sân hay chơi'}</span>
-                </span>
-                <span className="inline-flex items-center gap-1 shrink-0 text-gray-500">{sessionCount} buổi đã lưu</span>
-              </CardDescription>
-            </CardHeader>
-          </Card>
-        );
-      })}
+                      <CardDescription className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs">
+                        <span className="inline-flex items-center gap-1 shrink-0">
+                          <Users className="size-3.5 text-emerald-600" />
+                          {group.members.length} người ({maleCount} nam, {femaleCount} nữ)
+                        </span>
+                        <span className="inline-flex items-center gap-1 shrink-0 text-[#be185d] font-medium">
+                          <Venus className="size-3.5" />
+                          Trần nữ {formatVND(group.female_cap)}
+                        </span>
+                        <span className="inline-flex items-start gap-1 text-gray-700">
+                          <MapPin className="size-3.5 shrink-0 text-gray-500 mt-0.5" />
+                          <span className="wrap-break-word">{defaultCourt ?? 'Chưa chọn sân hay chơi'}</span>
+                        </span>
+                        <span className="inline-flex items-center gap-1 shrink-0 text-gray-500">{sessionCount} buổi đã lưu</span>
+                      </CardDescription>
+                    </CardHeader>
+                  </li>
+                );
+              })}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

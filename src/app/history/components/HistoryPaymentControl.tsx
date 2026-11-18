@@ -1,21 +1,23 @@
 'use client';
 
-import type { TPaymentMethod, TSessionPlayer } from '@/types/session.type';
+import type { TSessionPlayer } from '@/types/session.type';
 import { cn } from 'cn';
 import { Check } from 'lucide-react';
-import { formatPaidAt, needsPayment, PAYMENT_METHOD_LABELS } from '../utils/payment';
+import { formatPaidAt, needsPayment } from '../utils/payment';
 
 interface HistoryPaymentControlProps {
   player: TSessionPlayer;
   disabled: boolean;
-  /** Đánh dấu bằng hình thức `method`, hoặc `null` để bỏ đánh dấu. */
-  onChange: (method: TPaymentMethod | null) => void;
+  /** `true` = đánh dấu đã thu (chuyển khoản), `false` = bỏ đánh dấu. */
+  onChange: (paid: boolean) => void;
 }
 
 /**
- * Nút chuyển đổi trạng thái thanh toán của 1 người:
- * - Khi chưa đóng: Nút bo tròn màu cam [Chưa đóng], hover vào đổi sang màu xanh [Xác nhận]. Click để xác nhận thanh toán (mặc định CK).
- * - Sau khi click (Đã thu): Chữ "✓ Đã thu" màu xanh lá. Chạm lại để khôi phục về trạng thái "Chưa đóng".
+ * Nút trạng thái thanh toán của 1 người (mọi khoản thu đều là chuyển khoản):
+ * - Chưa đóng: nút bo tròn màu cam [Chưa đóng]. Chạm để xác nhận đã thu.
+ * - Đã thu: chữ "✓ Đã thu" màu xanh lá. Chạm lại để bỏ đánh dấu.
+ * Cả hai trạng thái cùng chiều rộng để cột số tiền không bị xô lệch, và có vùng chạm
+ * rộng hơn phần nhìn thấy (`after:-inset-2`) để dễ bấm trên điện thoại.
  */
 export default function HistoryPaymentControl({ player, disabled, onChange }: HistoryPaymentControlProps) {
   if (!needsPayment(player)) return null;
@@ -23,17 +25,23 @@ export default function HistoryPaymentControl({ player, disabled, onChange }: Hi
   const verb = refund ? 'đã hoàn' : 'đã thu';
   const unpaidLabel = refund ? 'Chưa hoàn' : 'Chưa đóng';
   const paidLabel = refund ? 'Đã hoàn' : 'Đã thu';
+  const isPaid = Boolean(player.paid_method);
 
-  if (player.paid_method) {
-    const label = PAYMENT_METHOD_LABELS[player.paid_method];
-    const paidAt = formatPaidAt(player.paid_at);
+  const base = cn(
+    'relative inline-flex h-7 w-20 shrink-0 items-center justify-center gap-1 rounded-full text-xs whitespace-nowrap',
+    'touch-manipulation select-none transition-[color,background-color,border-color,transform] duration-150',
+    'after:absolute after:-inset-x-1 after:-inset-y-2 active:scale-95',
+    'disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100',
+  );
+
+  if (isPaid) {
     return (
       <button
         type="button"
-        onClick={() => onChange(null)}
+        onClick={() => onChange(false)}
         disabled={disabled}
-        title={`${player.name} ${verb} (${label.long}) lúc ${paidAt}. Chạm để khôi phục về "${unpaidLabel}".`}
-        className="inline-flex w-20.5 shrink-0 items-center justify-end gap-1 text-xs font-semibold text-emerald-700 transition-colors hover:text-emerald-800 hover:underline disabled:cursor-not-allowed disabled:opacity-50"
+        title={`${player.name} ${verb} lúc ${formatPaidAt(player.paid_at)}. Chạm để bỏ đánh dấu.`}
+        className={cn(base, 'font-semibold text-emerald-700 hover:bg-emerald-50 active:bg-emerald-100')}
       >
         <Check className="size-3.5 stroke-[2.5]" />
         <span>{paidLabel}</span>
@@ -44,18 +52,15 @@ export default function HistoryPaymentControl({ player, disabled, onChange }: Hi
   return (
     <button
       type="button"
-      onClick={() => onChange('TRANSFER')}
-      onContextMenu={(e) => {
-        e.preventDefault();
-        onChange('CASH');
-      }}
+      onClick={() => onChange(true)}
       disabled={disabled}
-      title={`Chạm để xác nhận ${player.name} ${verb} (mặc định Chuyển khoản, chuột phải để chọn Tiền mặt)`}
+      title={`Chạm để xác nhận ${player.name} ${verb}`}
       className={cn(
-        'group inline-flex h-6 w-18 shrink-0 items-center justify-center rounded-full border text-xs font-medium whitespace-nowrap transition-all select-none',
+        base,
+        'group border font-medium',
         'border-amber-300 bg-amber-50/70 text-amber-800',
         'hover:border-sky-300 hover:bg-sky-50 hover:text-sky-700',
-        'disabled:cursor-not-allowed disabled:opacity-50',
+        'active:border-emerald-400 active:bg-emerald-50 active:text-emerald-700',
       )}
     >
       <span className="group-hover:hidden">{unpaidLabel}</span>

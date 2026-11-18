@@ -3,13 +3,15 @@ import { SupabaseClientApi } from '../client/supabase.client';
 
 /** Loại quả cầu: bảng `shuttlecocks`. Hai loại mặc định được tạo sẵn trong migration SQL. */
 export class ShuttlecockApi extends SupabaseClientApi {
-  /** Lấy danh sách loại cầu (gồm cả loại đã ẩn), sắp theo tên. */
+  /** Lấy danh sách loại cầu, sắp theo thời điểm tạo. */
   static async fetchAll(): Promise<TShuttlecock[]> {
-    const { data, error } = await this.database.from('shuttlecocks').select('*').order('created_at', { ascending: true });
+    const { data, error } = await this.database.from('shuttlecocks').select('*').order('created_at', {
+      ascending: true,
+    });
     if (error) throw error;
-    return data ?? [];
-  }
 
+    return data;
+  }
   /**
    * Tạo mới hoặc ghi đè 1 loại cầu (id do app sinh).
    * Không ghi `is_default`: cờ mặc định chỉ đổi qua `setDefault`, để dữ liệu cũ trên màn hình
@@ -17,6 +19,7 @@ export class ShuttlecockApi extends SupabaseClientApi {
    */
   static async save(shuttlecock: TShuttlecock): Promise<void> {
     shuttlecock.is_default = true;
+
     const { error } = await this.database.from('shuttlecocks').upsert(shuttlecock);
     if (error) throw error;
   }
@@ -24,6 +27,12 @@ export class ShuttlecockApi extends SupabaseClientApi {
   /** Đặt 1 loại cầu làm mặc định và bỏ cờ ở loại cũ, trong cùng 1 transaction. */
   static async setDefault(id: string): Promise<void> {
     const { error } = await this.database.rpc('set_default_shuttlecock', { p_id: id });
+    if (error) throw error;
+  }
+
+  /** Xóa hẳn 1 loại cầu. Khóa ngoại `sessions.shuttlecock_id` là `on delete set null`, buổi chơi cũ vẫn giữ `shuttle_brand`. */
+  static async delete(id: string): Promise<void> {
+    const { error } = await this.database.from('shuttlecocks').delete().eq('id', id);
     if (error) throw error;
   }
 }

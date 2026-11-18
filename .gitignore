@@ -42,3 +42,9 @@ next-env.d.ts
 
 # supabase cache
 supabase/.temp/
+
+# Playwright MCP
+.playwright-mcp/
+
+# Kiro
+.kiro

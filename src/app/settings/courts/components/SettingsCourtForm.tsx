@@ -1,106 +1,63 @@
 'use client';
-
 import { FieldError } from '@/components/form/FieldError';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Check, Plus, X } from 'lucide-react';
+import { useId } from 'react';
 import { useForm } from 'react-hook-form';
 import { courtFormSchema, type CourtDraft } from '../schemas/court.schema';
-
-const EMPTY_COURT: CourtDraft = { name: '', address: '' };
-
-/** Trả về thông báo lỗi (VD: trùng tên) để hiện dưới ô tên, hoặc null nếu lưu thành công. */
-export type SettingsCourtSubmit = (values: CourtDraft) => Promise<string | null>;
-
-/** Form thêm sân mới (nằm phía trên danh sách). */
-export function SettingsCourtAddForm({ disabled, onSubmit }: { disabled: boolean; onSubmit: SettingsCourtSubmit }) {
-  const {
-    register,
-    handleSubmit,
-    reset,
-    setError,
-    formState: { errors, isValid, isSubmitting },
-  } = useForm<CourtDraft>({
-    resolver: zodResolver(courtFormSchema),
-    defaultValues: EMPTY_COURT,
-    mode: 'onChange',
-  });
-
-  const submit = handleSubmit(async (values) => {
-    const message = await onSubmit(values);
-    if (message) setError('name', { message });
-    else reset(EMPTY_COURT);
-  });
-
-  return (
-    <form onSubmit={submit} noValidate className="flex flex-col gap-2">
-      <div className="flex flex-col gap-2 sm:flex-row">
-        <Input
-          {...register('name')}
-          aria-label="Tên sân mới"
-          aria-invalid={!!errors.name}
-          placeholder="Tên sân (VD: Sân Mỹ Đình)"
-          className="min-w-0 flex-1"
-        />
-        <Input
-          {...register('address')}
-          aria-label="Địa chỉ sân mới"
-          placeholder="Địa chỉ (không bắt buộc)"
-          className="min-w-0 flex-1"
-        />
-        <Button type="submit" disabled={disabled || !isValid || isSubmitting}>
-          <Plus /> Thêm sân
-        </Button>
-      </div>
-      <FieldError message={errors.name?.message} />
-    </form>
-  );
-}
-
-/** Form sửa trực tiếp trên một dòng của danh sách. Enter để lưu, Escape để hủy. */
-export function SettingsCourtEditForm({
-  initial,
-  disabled,
-  onSubmit,
-  onCancel,
-}: {
+interface SettingsCourtFormProps {
   initial: CourtDraft;
-  disabled: boolean;
-  onSubmit: SettingsCourtSubmit;
+  submitLabel: string;
+  disabled?: boolean;
+  /** Trả về thông báo lỗi (VD: trùng tên) để hiện dưới ô tên, hoặc null nếu lưu thành công. */
+  onSubmit: (values: CourtDraft) => Promise<string | null>;
   onCancel: () => void;
-}) {
+}
+/** Form thêm/sửa sân, hiện trong khung xanh khi bấm "Thêm sân" hoặc nút sửa. Escape để hủy. */
+export default function SettingsCourtForm({ initial, submitLabel, disabled, onSubmit, onCancel }: SettingsCourtFormProps) {
+  const uid = useId();
   const {
     register,
     handleSubmit,
     setError,
     formState: { errors, isValid, isSubmitting },
   } = useForm<CourtDraft>({ resolver: zodResolver(courtFormSchema), defaultValues: initial, mode: 'onChange' });
-
   const submit = handleSubmit(async (values) => {
     const message = await onSubmit(values);
     if (message) setError('name', { message });
   });
-
   return (
-    <form onSubmit={submit} noValidate className="flex min-w-0 flex-1 flex-wrap items-center gap-2 sm:flex-nowrap">
-      <Input {...register('name')} autoFocus aria-label="Tên sân" aria-invalid={!!errors.name} className="min-w-0 flex-1" />
-      <Input {...register('address')} aria-label="Địa chỉ sân" placeholder="Địa chỉ" className="min-w-0 flex-1" />
-      <Button
-        type="submit"
-        variant="ghost"
-        size="icon"
-        aria-label="Lưu"
-        title="Lưu"
-        disabled={disabled || !isValid || isSubmitting}
-        className="text-primary"
-      >
-        <Check />
-      </Button>
-      <Button type="button" variant="ghost" size="icon" aria-label="Hủy" title="Hủy" onClick={onCancel}>
-        <X />
-      </Button>
-      <FieldError message={errors.name?.message} className="basis-full text-xs text-destructive" />
+    <form
+      onSubmit={submit}
+      onKeyDown={(e) => e.key === 'Escape' && onCancel()}
+      noValidate
+      className="flex flex-col gap-3 rounded-lg border border-emerald-200 bg-emerald-50/40 p-3"
+    >
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor={`${uid}-name`} className="text-xs font-semibold text-gray-600">
+            Tên sân
+          </Label>
+          <Input id={`${uid}-name`} {...register('name')} autoFocus aria-invalid={!!errors.name} placeholder="VD: Sân Mỹ Đình" />
+          <FieldError message={errors.name?.message} />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor={`${uid}-address`} className="text-xs font-semibold text-gray-600">
+            Địa chỉ (không bắt buộc)
+          </Label>
+          <Input id={`${uid}-address`} {...register('address')} placeholder="VD: đường Lê Đức Thọ, Từ Liêm" />
+        </div>
+      </div>
+      <div className="flex justify-end gap-2">
+        <Button type="button" variant="ghost" onClick={onCancel}>
+          Hủy
+        </Button>
+        <Button type="submit" disabled={disabled || !isValid || isSubmitting}>
+          {submitLabel}
+        </Button>
+      </div>
     </form>
   );
 }

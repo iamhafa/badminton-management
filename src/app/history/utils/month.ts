@@ -2,6 +2,7 @@ import type { TSession } from '@/types/session.type';
 import { parseIsoDate } from '@/utils/date';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
+import { getPaymentSummary } from './payment';
 
 export type TMonthGroup = {
   /** 'yyyy-MM', hoặc 'unknown' với buổi chơi không có ngày hợp lệ. */
@@ -11,6 +12,8 @@ export type TMonthGroup = {
   sessions: TSession[];
   /** Tổng chi phí các buổi trong tháng. */
   total: number;
+  /** Tổng tiền chưa thu của các buổi trong tháng. */
+  outstanding: number;
 };
 
 /**
@@ -25,11 +28,18 @@ export function groupSessionsByMonth(sessions: TSession[]): TMonthGroup[] {
     const key = date ? format(date, 'yyyy-MM') : 'unknown';
     let group = groups.at(-1);
     if (!group || group.key !== key) {
-      group = { key, label: date ? `Tháng ${format(date, 'MM/yyyy')}` : 'Không rõ ngày', sessions: [], total: 0 };
+      group = {
+        key,
+        label: date ? `Tháng ${format(date, 'MM/yyyy')}` : 'Không rõ ngày',
+        sessions: [],
+        total: 0,
+        outstanding: 0,
+      };
       groups.push(group);
     }
     group.sessions.push(session);
     group.total += session.total_cost;
+    group.outstanding += getPaymentSummary(session).outstanding;
   }
   return groups;
 }
