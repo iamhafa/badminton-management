@@ -37,11 +37,11 @@ interface CalculatorSessionCostFormProps {
   input: TSessionInput;
   onChange: (patch: Partial<TSessionInput>) => void;
   participants: TParticipant[];
-  /** Các nhóm đang dùng (chưa ẩn). */
+  /** Các nhóm hiện có. */
   groups: TGroup[];
-  /** Các sân đang dùng (chưa ẩn). */
+  /** Các sân hiện có. */
   courts: TCourt[];
-  /** Các loại cầu đang dùng (chưa ẩn). */
+  /** Các loại cầu hiện có. */
   shuttlecocks: TShuttlecock[];
   /** Đổi nhóm (trang cha có thể hỏi xác nhận trước khi xóa lựa chọn người chơi). */
   onGroupChange: (groupId: string) => void;

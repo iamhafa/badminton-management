@@ -12,7 +12,6 @@ export type Database = {
         Row: {
           address: string;
           created_at: string;
-          deleted_at: string | null;
           id: string;
           name: string;
           updated_at: string;
@@ -20,7 +19,6 @@ export type Database = {
         Insert: {
           address?: string;
           created_at?: string;
-          deleted_at?: string | null;
           id?: string;
           name: string;
           updated_at?: string;
@@ -28,7 +26,6 @@ export type Database = {
         Update: {
           address?: string;
           created_at?: string;
-          deleted_at?: string | null;
           id?: string;
           name?: string;
           updated_at?: string;
@@ -39,7 +36,6 @@ export type Database = {
         Row: {
           created_at: string;
           default_court_id: string | null;
-          deleted_at: string | null;
           female_cap: number;
           id: string;
           name: string;
@@ -48,7 +44,6 @@ export type Database = {
         Insert: {
           created_at?: string;
           default_court_id?: string | null;
-          deleted_at?: string | null;
           female_cap?: number;
           id?: string;
           name: string;
@@ -57,7 +52,6 @@ export type Database = {
         Update: {
           created_at?: string;
           default_court_id?: string | null;
-          deleted_at?: string | null;
           female_cap?: number;
           id?: string;
           name?: string;
@@ -75,28 +69,34 @@ export type Database = {
       };
       members: {
         Row: {
+          created_at: string;
           gender: string;
           group_id: string;
           id: string;
           name: string;
           position: number;
           role: string | null;
+          updated_at: string;
         };
         Insert: {
+          created_at?: string;
           gender: string;
           group_id: string;
           id?: string;
           name: string;
           position?: number;
           role?: string | null;
+          updated_at?: string;
         };
         Update: {
+          created_at?: string;
           gender?: string;
           group_id?: string;
           id?: string;
           name?: string;
           position?: number;
           role?: string | null;
+          updated_at?: string;
         };
         Relationships: [
           {
@@ -112,6 +112,7 @@ export type Database = {
         Row: {
           base_share: number;
           court_and_shuttle_share: number;
+          created_at: string;
           drinks_water: boolean;
           gender: string;
           guest_source: string | null;
@@ -125,12 +126,14 @@ export type Database = {
           rounded_payable: number;
           session_id: string;
           type: string;
+          updated_at: string;
           water_credit: number;
           water_share: number;
         };
         Insert: {
           base_share?: number;
           court_and_shuttle_share?: number;
+          created_at?: string;
           drinks_water?: boolean;
           gender: string;
           guest_source?: string | null;
@@ -144,12 +147,14 @@ export type Database = {
           rounded_payable?: number;
           session_id: string;
           type?: string;
+          updated_at?: string;
           water_credit?: number;
           water_share?: number;
         };
         Update: {
           base_share?: number;
           court_and_shuttle_share?: number;
+          created_at?: string;
           drinks_water?: boolean;
           gender?: string;
           guest_source?: string | null;
@@ -163,6 +168,7 @@ export type Database = {
           rounded_payable?: number;
           session_id?: string;
           type?: string;
+          updated_at?: string;
           water_credit?: number;
           water_share?: number;
         };
@@ -196,6 +202,7 @@ export type Database = {
           shuttles_used: number;
           total_cost: number;
           tube_price: number;
+          updated_at: string;
           water_drinkers_count: number;
           water_fee: number;
           water_payer_id: string | null;
@@ -220,6 +227,7 @@ export type Database = {
           shuttles_used?: number;
           total_cost?: number;
           tube_price?: number;
+          updated_at?: string;
           water_drinkers_count?: number;
           water_fee?: number;
           water_payer_id?: string | null;
@@ -244,6 +252,7 @@ export type Database = {
           shuttles_used?: number;
           total_cost?: number;
           tube_price?: number;
+          updated_at?: string;
           water_drinkers_count?: number;
           water_fee?: number;
           water_payer_id?: string | null;
@@ -276,7 +285,6 @@ export type Database = {
       shuttlecocks: {
         Row: {
           created_at: string;
-          deleted_at: string | null;
           id: string;
           is_default: boolean;
           name: string;
@@ -285,7 +293,6 @@ export type Database = {
         };
         Insert: {
           created_at?: string;
-          deleted_at?: string | null;
           id?: string;
           is_default?: boolean;
           name: string;
@@ -294,7 +301,6 @@ export type Database = {
         };
         Update: {
           created_at?: string;
-          deleted_at?: string | null;
           id?: string;
           is_default?: boolean;
           name?: string;

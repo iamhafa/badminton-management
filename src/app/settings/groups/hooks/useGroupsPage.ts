@@ -1,7 +1,7 @@
 'use client';
 
 import { useQueryCourts } from '@/hooks/useQueryCourts';
-import { useMutateSaveGroup, useQueryGroups } from '@/hooks/useQueryGroups';
+import { useMutateDeleteGroup, useMutateSaveGroup, useQueryGroups } from '@/hooks/useQueryGroups';
 import { useQuerySessions } from '@/hooks/useQuerySessions';
 import { confirm } from '@/stores/confirm.store';
 import { ConnectionState, useConnectionStore } from '@/stores/connection.store';
@@ -11,6 +11,7 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { useBoolean } from 'usehooks-ts';
 import type { GroupDraft } from '../schemas/group.schema';
+import { deleteGroupConfirmOptions } from '../utils/delete-group';
 
 /** State và thao tác của trang danh sách nhóm. `page.tsx` chỉ lo hiển thị. */
 export function useGroupsPage() {
@@ -20,6 +21,7 @@ export function useGroupsPage() {
   const { data: courts, isPending: courtIsPending, error: courtError } = useQueryCourts();
   const { data: sessions, isPending: sessionIsPending, error: sessionError } = useQuerySessions();
   const { mutateAsync: saveGroup, isPending: saveGroupPending } = useMutateSaveGroup();
+  const { mutateAsync: deleteGroup } = useMutateDeleteGroup();
 
   const loading: boolean = groupIsPending || courtIsPending || sessionIsPending || saveGroupPending;
   const loadError = groupError ?? courtError ?? sessionError;
@@ -46,7 +48,6 @@ export function useGroupsPage() {
       members: [],
       created_at: now,
       updated_at: now,
-      deleted_at: null,
     };
     try {
       await saveGroup(group);
@@ -59,21 +60,14 @@ export function useGroupsPage() {
     }
   }
 
-  async function handleHide(group: TGroup): Promise<void> {
-    const ok: boolean = await confirm({
-      title: `Ẩn nhóm "${group.name}"?`,
-      description:
-        'Nhóm sẽ không còn hiện khi tính tiền. Danh sách thành viên và lịch sử các buổi chơi của nhóm vẫn được giữ, bạn có thể khôi phục bất cứ lúc nào.',
-      confirmLabel: 'Ẩn nhóm',
-      destructive: true,
-    });
-    if (!ok) return;
-    const updated: TGroupSave = { ...group, deleted_at: nowIso(), updated_at: nowIso() };
+  async function handleDelete(group: TGroup): Promise<void> {
+    const sessionCount: number = sessions.filter((s) => s.group_id === group.id).length;
+    if (!(await confirm(deleteGroupConfirmOptions(group, sessionCount)))) return;
     try {
-      await saveGroup(updated);
-      toast.success(`Đã ẩn nhóm "${group.name}"`);
+      await deleteGroup(group.id);
+      toast.success(`Đã xóa nhóm "${group.name}"`);
     } catch (err) {
-      toast.error(`Ẩn thất bại: ${err instanceof Error ? err.message : String(err)}`);
+      toast.error(`Xóa thất bại: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
 
@@ -94,6 +88,6 @@ export function useGroupsPage() {
     closeCreating,
     courtName,
     handleCreate,
-    handleHide,
+    handleDelete,
   };
 }

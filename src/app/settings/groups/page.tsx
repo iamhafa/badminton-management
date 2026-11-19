@@ -5,7 +5,7 @@ import { Button, buttonVariants } from '@/components/ui/button';
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import type { TGroup } from '@/types/group.type';
 import { formatVND } from '@/utils/format';
-import { ChevronRight, EyeOff, MapPin, Plus, Users, Venus } from 'lucide-react';
+import { ChevronRight, Trash2, MapPin, Plus, Users, Venus } from 'lucide-react';
 import Link from 'next/link';
 import SettingsGroupForm from './components/SettingsGroupForm';
 import { useGroupsPage } from './hooks/useGroupsPage';
@@ -27,7 +27,7 @@ export default function GroupsManager() {
     closeCreating,
     courtName,
     handleCreate,
-    handleHide,
+    handleDelete,
   } = useGroupsPage();
 
   return (
@@ -115,13 +115,13 @@ export default function GroupsManager() {
                           <Button
                             variant="ghost"
                             size="icon-sm"
-                            aria-label="Ẩn nhóm"
-                            title="Ẩn nhóm"
-                            onClick={() => handleHide(group)}
+                            aria-label="Xóa nhóm"
+                            title="Xóa nhóm"
+                            onClick={() => handleDelete(group)}
                             disabled={disabled}
                             className="text-muted-foreground hover:text-destructive size-7"
                           >
-                            <EyeOff className="size-3.5" />
+                            <Trash2 className="size-3.5" />
                           </Button>
                         </div>
                       </div>

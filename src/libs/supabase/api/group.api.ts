@@ -3,7 +3,7 @@ import { SupabaseClientApi } from '../client/supabase.client';
 
 /** Nhóm chơi: bảng `groups` + thành viên trong bảng `members`. */
 export class GroupApi extends SupabaseClientApi {
-  /** Lấy danh sách nhóm (gồm cả nhóm đã ẩn) kèm thành viên, sắp theo thời gian tạo. */
+  /** Lấy danh sách nhóm kèm thành viên, sắp theo thời gian tạo. */
   static async fetchAll(): Promise<TGroup[]> {
     const { data, error } = await this.database
       .from('groups')
@@ -28,6 +28,15 @@ export class GroupApi extends SupabaseClientApi {
       p_group: group,
       p_members: members,
     });
+    if (error) throw error;
+  }
+
+  /**
+   * Xóa hẳn 1 nhóm. Thành viên bị xóa theo (`members.group_id` là `on delete cascade`);
+   * buổi chơi cũ về `group_id = null` (`on delete set null`) nhưng vẫn giữ `group_name`.
+   */
+  static async delete(id: string): Promise<void> {
+    const { error } = await this.database.from('groups').delete().eq('id', id);
     if (error) throw error;
   }
 }

@@ -10,7 +10,8 @@
     "lint:fix": "oxlint --fix",
     "format": "oxfmt \"src/**/*.{ts,tsx,json}\" \"*.json\" \".*.json\"",
     "format:check": "oxfmt --check \"src/**/*.{ts,tsx,json}\" \"*.json\" \".*.json\"",
-    "db:types": "supabase gen types typescript --remote iubovgfhnwktfpegqknx --schema public > node_modules/.database.type.tmp && node -e \"require('fs').renameSync('node_modules/.database.type.tmp', 'src/libs/supabase/types/database.type.ts')\" && oxfmt src/libs/supabase/types/database.type.ts"
+    "db:types": "supabase gen types typescript --remote iubovgfhnwktfpegqknx --schema public > node_modules/.database.type.tmp && node -e \"require('fs').renameSync('node_modules/.database.type.tmp', 'src/libs/supabase/types/database.type.ts')\" && oxfmt src/libs/supabase/types/database.type.ts",
+    "db:types:local": "supabase gen types typescript --local --schema public > node_modules/.database.type.tmp && node -e \"require('fs').renameSync('node_modules/.database.type.tmp', 'src/libs/supabase/types/database.type.ts')\" && oxfmt src/libs/supabase/types/database.type.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",

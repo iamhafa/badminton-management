@@ -40,9 +40,10 @@ export type TSessionInput = Pick<
 >;
 
 /**
- * Kết quả tính tiền của 1 buổi chưa lưu: đúng hình dạng của `TSession` nhưng chưa có id / created_at,
- * và người chơi chưa có session_id. Lưu bằng `SessionApi.save` (tách `session_players` ra).
+ * Kết quả tính tiền của 1 buổi chưa lưu: đúng hình dạng của `TSession` nhưng chưa có id / created_at / updated_at,
+ * và người chơi chưa có session_id / created_at / updated_at (hàm `save_session` tự gán).
+ * Lưu bằng `SessionApi.save` (tách `session_players` ra).
  */
-export type TSessionDraft = Omit<TSession, 'id' | 'created_at' | 'session_players'> & {
-  session_players: Omit<TSessionPlayer, 'session_id'>[];
+export type TSessionDraft = Omit<TSession, 'id' | 'created_at' | 'updated_at' | 'session_players'> & {
+  session_players: Omit<TSessionPlayer, 'session_id' | 'created_at' | 'updated_at'>[];
 };

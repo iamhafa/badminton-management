@@ -108,12 +108,12 @@ export function useCalculator(group: TGroup | undefined, courts: TCourt[], shutt
     }
   }
 
-  // Sân đang chọn bị ẩn: bỏ chọn để bắt buộc chọn lại.
+  // Sân đang chọn đã bị xóa: bỏ chọn để bắt buộc chọn lại.
   if (input.court_id && !courts.some((c) => c.id === input.court_id)) {
     setInput((prev) => ({ ...prev, court_id: null }));
   }
 
-  // Loại cầu đang chọn bị ẩn: bỏ chọn để bắt buộc chọn lại (giữ nguyên giá đã nhập).
+  // Loại cầu đang chọn đã bị xóa: bỏ chọn để bắt buộc chọn lại (giữ nguyên giá đã nhập).
   if (input.shuttlecock_id && !shuttlecocks.some((s) => s.id === input.shuttlecock_id)) {
     setInput((prev) => ({ ...prev, shuttlecock_id: null }));
   }

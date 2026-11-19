@@ -1,7 +1,12 @@
 'use client';
 
 import { useQueryGroups } from '@/hooks/useQueryGroups';
-import { useMutateDeleteSession, useMutateUpdatePayments, useQuerySessions } from '@/hooks/useQuerySessions';
+import {
+  useMutateDeleteSession,
+  useMutateUpdatePayments,
+  useQuerySessions,
+  useQueryUnsettledSessions,
+} from '@/hooks/useQuerySessions';
 import { confirm } from '@/stores/confirm.store';
 import { ConnectionState, useConnectionStore } from '@/stores/connection.store';
 import type { TPaymentMethod, TSession } from '@/types/session.type';
@@ -11,7 +16,7 @@ import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { ALL_GROUPS, buildGroupFilterOptions, filterSessionsByGroup, sessionGroupName } from '../utils/filter';
 import { groupSessionsByMonth } from '../utils/month';
-import { getPaymentSummary, unpaidPlayerIds } from '../utils/payment';
+import { unpaidPlayerIds } from '../utils/payment';
 
 function errorMessage(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
@@ -22,22 +27,29 @@ export function useHistoryPage() {
   const cloudOnline: boolean = useConnectionStore((state: ConnectionState) => state.cloudStatus === 'online');
 
   const { data: sessions, isFetching: sessionsLoading, error: sessionsError, refetch: refetchSessions } = useQuerySessions();
+  const {
+    data: unsettled,
+    isFetching: unsettledLoading,
+    error: unsettledError,
+    refetch: refetchUnsettled,
+  } = useQueryUnsettledSessions();
   const { data: groups, isFetching: groupsLoading, error: groupsError, refetch: refetchGroups } = useQueryGroups();
   const { mutateAsync: deleteSession } = useMutateDeleteSession();
   const { mutateAsync: updatePayments } = useMutateUpdatePayments();
-
-  const loading: boolean = sessionsLoading || groupsLoading;
-  const loadError = sessionsError ?? groupsError;
-  const error: string | null = loadError ? `Không tải được lịch sử: ${errorMessage(loadError)}` : null;
 
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [groupFilter, setGroupFilter] = useState<string>(ALL_GROUPS);
   const [unsettledOnly, setUnsettledOnly] = useState(false);
 
+  // Danh sách chưa thu đủ được tải lại sau mỗi lần đánh dấu, nên chỉ báo đang tải khi đang xem danh sách đó.
+  const loading: boolean = sessionsLoading || groupsLoading || (unsettledOnly && unsettledLoading);
+  const loadError = sessionsError ?? unsettledError ?? groupsError;
+  const error: string | null = loadError ? `Không tải được lịch sử: ${errorMessage(loadError)}` : null;
+
   const filterOptions = useMemo(() => buildGroupFilterOptions(sessions, groups), [sessions, groups]);
   const groupSessions = useMemo(() => filterSessionsByGroup(sessions, groupFilter), [sessions, groupFilter]);
-  const unsettledSessions = useMemo(() => groupSessions.filter((s) => !getPaymentSummary(s).settled), [groupSessions]);
+  const unsettledSessions = useMemo(() => filterSessionsByGroup(unsettled, groupFilter), [unsettled, groupFilter]);
   const visibleSessions: TSession[] = unsettledOnly ? unsettledSessions : groupSessions;
   const months = useMemo(() => groupSessionsByMonth(visibleSessions), [visibleSessions]);
 
@@ -47,6 +59,7 @@ export function useHistoryPage() {
 
   function refresh(): void {
     void refetchSessions();
+    void refetchUnsettled();
     void refetchGroups();
   }
 

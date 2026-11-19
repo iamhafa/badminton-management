@@ -55,7 +55,6 @@ export function useShuttlecocksPage() {
       is_default: false,
       created_at: now,
       updated_at: now,
-      deleted_at: null,
     };
     try {
       await saveShuttlecock(newShuttlecock);
@@ -71,7 +70,7 @@ export function useShuttlecocksPage() {
     if (findDuplicate(name, shuttlecock.id)) {
       return `Loại cầu "${name}" đã có trong danh sách.`;
     }
-    const updated: TShuttlecock = { ...shuttlecock, name, tube_price: values.tube_price, updated_at: nowIso() };
+    const updated: TShuttlecock = { ...shuttlecock, name, tube_price: values.tube_price };
     try {
       await saveShuttlecock(updated);
       closeForm();

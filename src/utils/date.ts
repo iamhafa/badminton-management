@@ -33,7 +33,7 @@ export function todayIso(): string {
   return format(new Date(), 'yyyy-MM-dd');
 }
 
-/** Thời điểm hiện tại dạng ISO (UTC), dùng cho created_at / updated_at / deleted_at / paid_at. */
+/** Thời điểm hiện tại dạng ISO (UTC), dùng cho created_at / updated_at (khi tạo mới) và paid_at. */
 export function nowIso(): string {
   return new Date().toISOString();
 }

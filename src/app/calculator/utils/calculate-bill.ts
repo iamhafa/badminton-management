@@ -1,5 +1,5 @@
 import type { TParticipant } from '@/types/player.type';
-import type { TSessionDraft, TSessionInput, TSessionPlayer } from '@/types/session.type';
+import type { TSessionDraft, TSessionInput } from '@/types/session.type';
 import { SHUTTLES_PER_TUBE } from '@/utils/format';
 
 // Các phép tính tiền của 1 buổi chơi. Hàm thuần (không dùng React), nên kiểm thử và dùng lại được ở nơi khác.
@@ -68,7 +68,7 @@ export function calculateBill(
   // Phân bổ tiền nước lọc: chỉ chia cho những người có uống nước
   const waterPerPerson: number = waterDrinkersCount > 0 && input.water_fee > 0 ? input.water_fee / waterDrinkersCount : 0;
 
-  const sessionPlayers: Omit<TSessionPlayer, 'session_id'>[] = players.map((player: TParticipant, position: number) => {
+  const sessionPlayers: TSessionDraft['session_players'] = players.map((player: TParticipant, position: number) => {
     const courtAndShuttleShare: number = player.gender === 'FEMALE' ? femaleShare : maleShare;
     const waterShare: number = player.drinks_water ? waterPerPerson : 0;
     const baseShare: number = courtAndShuttleShare + waterShare;

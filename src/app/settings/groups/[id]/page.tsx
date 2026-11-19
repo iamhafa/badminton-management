@@ -4,7 +4,7 @@ import LoadingState from '@/components/common/LoadingState';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatVND } from '@/utils/format';
-import { ArrowLeft, EyeOff, MapPin, Pencil, Users, Venus } from 'lucide-react';
+import { ArrowLeft, Trash2, MapPin, Pencil, Users, Venus } from 'lucide-react';
 import Link from 'next/link';
 import SettingsGroupForm from '../components/SettingsGroupForm';
 import SettingsGroupRosterManager from '../components/SettingsGroupRosterManager';
@@ -22,7 +22,7 @@ export default function GroupDetailPage() {
     setIsEditing,
     courtName,
     handleUpdate,
-    handleHide,
+    handleDelete,
     handleSaveMembers,
   } = useGroupDetailPage();
 
@@ -39,7 +39,7 @@ export default function GroupDetailPage() {
           </div>
           <div className="flex flex-col gap-1">
             <p className="font-semibold text-gray-800">Không tìm thấy nhóm này</p>
-            <p className="text-xs text-muted-foreground">Nhóm có thể đã bị ẩn hoặc liên kết không chính xác.</p>
+            <p className="text-xs text-muted-foreground">Nhóm có thể đã bị xóa hoặc liên kết không chính xác.</p>
           </div>
           <Link href="/settings/groups" className={buttonVariants({ variant: 'outline', size: 'sm', className: 'mt-2 gap-1.5' })}>
             <ArrowLeft className="size-3.5" /> Quay lại danh sách nhóm
@@ -91,13 +91,13 @@ export default function GroupDetailPage() {
                 <Button
                   variant="ghost"
                   size="icon-sm"
-                  aria-label="Ẩn nhóm"
-                  title="Ẩn nhóm"
-                  onClick={handleHide}
+                  aria-label="Xóa nhóm"
+                  title="Xóa nhóm"
+                  onClick={handleDelete}
                   disabled={disabled}
                   className="text-muted-foreground hover:text-destructive size-7"
                 >
-                  <EyeOff className="size-3.5" />
+                  <Trash2 className="size-3.5" />
                 </Button>
               </div>
             )}

@@ -42,6 +42,9 @@ next-env.d.ts
 
 # supabase cache
 supabase/.temp/
+# supabase local: SQL nháp của Studio và bản dump dữ liệu (có thể chứa dữ liệu thật)
+supabase/snippets/
+supabase/backups/
 
 # Playwright MCP
 .playwright-mcp/

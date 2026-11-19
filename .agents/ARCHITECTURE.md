@@ -43,7 +43,7 @@ src/
 │       ├── layout.tsx                      # Settings tab bar (inline nav, Client Component)
 │       ├── groups/                         # /settings/groups and /settings/groups/[id]
 │       │   ├── page.tsx                    # Group summary list + create group
-│       │   ├── [id]/page.tsx               # Group detail: edit settings, hide, manage members
+│       │   ├── [id]/page.tsx               # Group detail: edit settings, delete, manage members
 │       │   ├── hooks/                      # useGroupsPage, useGroupDetailPage
 │       │   ├── components/                 # SettingsGroupForm, SettingsGroupRosterManager, SettingsGroupMemberForm
 │       │   └── schemas/                    # group.schema.ts, member.schema.ts
@@ -67,9 +67,9 @@ src/
 │
 ├── hooks/                                  # Shared TanStack Query hooks
 │   ├── useQueryCourts.ts                   # useQueryCourts, useMutateSaveCourt, useMutateDeleteCourt
-│   ├── useQueryGroups.ts                   # useQueryGroups, useMutateSaveGroup
-│   ├── useQuerySessions.ts                 # useQuerySessions, useMutateSaveSession, useMutateDeleteSession,
-│   │                                       # useMutateUpdatePayments
+│   ├── useQueryGroups.ts                   # useQueryGroups, useMutateSaveGroup, useMutateDeleteGroup
+│   ├── useQuerySessions.ts                 # useQuerySessions, useQueryUnsettledSessions, useMutateSaveSession,
+│   │                                       # useMutateDeleteSession, useMutateUpdatePayments
 │   └── useQueryShuttlecocks.ts             # useQueryShuttlecocks, useMutateShuttlecock, useMutateSetDefaultShuttlecock, useMutateDeleteShuttlecock
 │
 ├── libs/supabase/                          # Data access layer only
@@ -96,7 +96,7 @@ src/
 ### 3.1. Routes (`src/app/<route>/`)
 
 - `page.tsx` contains UI (JSX) only. It reads everything it needs from one route hook.
-- Route hooks (`hooks/use*.ts`) hold page state and handlers: loading/error flags, duplicate-name checks, create/update/hide handlers, toasts, confirm dialogs.
+- Route hooks (`hooks/use*.ts`) hold page state and handlers: loading/error flags, duplicate-name checks, create/update/delete handlers, toasts, confirm dialogs.
 - Pure calculations go in the route's `utils/` (no React), so they can be tested and reused.
 - A route never imports from another route. When a second route needs something, move it to the shared folders.
 
@@ -145,12 +145,12 @@ Supabase (Postgres, REST via PostgREST)
 
 1. **Queries**
    - Query hooks use `initialData: []` with `initialDataUpdatedAt: 0`, so `data` is never `undefined` and a fetch runs on mount.
-   - The group query uses `select` to return only active groups (`deleted_at` is empty); hidden groups are not shown in the UI. Courts and shuttlecocks are hard-deleted (`CourtApi.delete`, `ShuttlecockApi.delete`): the foreign keys `sessions.court_id`, `sessions.shuttlecock_id` and `groups.default_court_id` are `on delete set null`, and sessions keep `court_name` / `shuttle_brand`, so history is unaffected. The delete mutations also invalidate `['groups']` / `['sessions']`. Sessions are returned as-is.
+   - There is no soft delete. Groups, courts and shuttlecocks are hard-deleted (`GroupApi.delete`, `CourtApi.delete`, `ShuttlecockApi.delete`): `members.group_id` is `on delete cascade`; `sessions.group_id`, `sessions.court_id`, `sessions.shuttlecock_id` and `groups.default_court_id` are `on delete set null`, and sessions keep `group_name` / `court_name` / `shuttle_brand`, so history is unaffected. The history group filter keys sessions of deleted groups by their saved `group_name` (`sessionGroupKey`). The delete mutations also invalidate `['groups']` / `['sessions']`.
    - Defaults (set in `QueryProvider`): `staleTime` 60 s, `retry` 1.
 
 2. **Mutations**
    - Save mutations invalidate their query key (`['courts']`, `['groups']`, ...) so the list is re-fetched from the database.
-   - Exceptions (optimistic, no refetch): `useMutateDeleteSession` removes the session from the cache immediately, and `useMutateUpdatePayments` applies payment marks immediately. Both restore the previous cache if the write fails.
+   - Exceptions (optimistic): `useMutateDeleteSession` removes the session from every `['sessions', ...]` cache immediately, and `useMutateUpdatePayments` applies payment marks immediately. Both restore the previous caches if the write fails. After a payment write, only `['sessions', 'unsettled']` is re-fetched (after the last of several quick writes), so a session that becomes settled leaves the "Chưa thu đủ" list.
 
 3. **Connection status**
    - `QueryProvider` sets `connection.store` from two sources: every query success/error (`QueryCache` callbacks) and the browser `online`/`offline` events.
@@ -173,11 +173,11 @@ Supabase (Postgres, REST via PostgREST)
 - Marking / unmarking one player shows a toast with "Hoàn tác" that restores the previous method and `paid_at`.
 - Amounts come from `rounded_payable` on the same row: > 0 must pay, < 0 gets a refund (e.g. the water buyer), 0 needs nothing.
 - `SessionApi.updatePayments(sessionId, playerIds, method, paidAt)` updates those two columns for the given players in one request.
-- "Chưa thu đủ" filtering and outstanding totals are computed in the browser (`app/history/utils/payment.ts`); a SQL view can take over if history grows large.
+- "Chưa thu đủ" filtering runs in the database: `SessionApi.fetchUnsettled()` embeds `session_players` a second time as an empty `unpaid:session_players!inner()` filtered by `paid_method is null` and `rounded_payable <> 0` (query key `['sessions', 'unsettled']`). The group filter is still applied in the browser on top of it. Per-session payment summaries and outstanding totals are computed in the browser (`app/history/utils/payment.ts`).
 
 ## 6. Data Model, Forms & Schemas
 
-- The database schema is managed directly in the Supabase Dashboard (the repo has no `supabase/migrations/`; `src/libs/supabase/types/database.type.ts`, generated by `pnpm db:types`, is the in-repo reference). It has tables `courts`, `shuttlecocks`, `groups`, `members`, `sessions`, `session_players`; `check` constraints for enum columns; rpc functions `save_session`, `save_group`, `set_default_shuttlecock`; RLS policies (currently public read/write because there is no login).
+- The database schema lives in `supabase/migrations/` and is developed against the local Supabase stack (`npx supabase start`); `src/libs/supabase/types/database.type.ts` is generated from it with `pnpm db:types:local`. Every table has `created_at` / `updated_at` (trigger `set_updated_at` keeps `updated_at` current). It has tables `courts`, `shuttlecocks`, `groups`, `members`, `sessions`, `session_players`; `check` constraints for enum columns; rpc functions `save_session`, `save_group`, `set_default_shuttlecock`; RLS policies (currently public read/write because there is no login).
 - There is **no mapper**: app types are the database rows (`Tables<'sessions'>`...) with enum columns narrowed in `src/types/*.type.ts`. Joined results have nested arrays (`TGroup.members`, `TSession.session_players`).
 - Sessions store money results as a snapshot (`total_cost`, `rounded_*_unit`, per-player `rounded_payable`...). Display values (session title, player counts) are computed when shown (`buildSessionTitle`, `countPlayers`).
 - Form schemas (`src/app/<route>/schemas/`) validate what the user types with `react-hook-form` + zod and use column names. Postgres validates stored data, so there are no read-side zod schemas.

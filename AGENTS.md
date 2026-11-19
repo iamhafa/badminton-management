@@ -66,10 +66,11 @@ src/
    - New route components must follow this prefix rule.
 
 4. **Data model = database (no mapper)**:
-   - The database is **Supabase (Postgres)**. The schema (tables, check constraints, rpc functions, RLS policies) is managed directly in the Supabase Dashboard; the repo has no `supabase/migrations/`. Read `src/libs/supabase/types/database.type.ts` to see the current tables and functions.
+   - The database is **Supabase (Postgres)**. The schema (tables, check constraints, rpc functions, triggers, RLS policies) lives in SQL migrations under `supabase/migrations/`. Develop against the local stack (`npx supabase start`, Docker); production is migrated later. Do not change the schema in a Dashboard by hand: add a migration with `npx supabase migration new <name>` and apply it with `npx supabase migration up`. Read `src/libs/supabase/types/database.type.ts` to see the current tables and functions.
+   - Every table has `created_at` and `updated_at`; a `set_updated_at` trigger (moddatetime) maintains `updated_at`, so the app never sets it on updates. There is no soft delete (`deleted_at`): deleting always removes the row, and foreign keys (`on delete set null` / `cascade`) handle related rows.
    - App types use the database rows directly (snake_case, `null` for empty): `src/types/*.type.ts` only alias `Tables<'...'>` from `src/libs/supabase/types/database.type.ts` and narrow enum columns (`gender`, `role`, `paid_method`...). Do not add mapper functions that rename fields.
    - Form schemas in `src/app/<route>/schemas/` use column names too (`female_cap`, `tube_price`). Form-only quirks (a `<select>` uses `''` for "none") are converted to `null` right where the row is built.
-   - `database.type.ts` is generated: after changing a table in the Dashboard, run `pnpm db:types` (needs `npx supabase login` once). Never edit it by hand.
+   - `database.type.ts` is generated: after adding a migration, run `pnpm db:types:local` (from the local stack; `pnpm db:types` reads production and needs `npx supabase login`). Never edit it by hand.
 
 5. **`src/libs/`**:
    - Only external service integrations: the Supabase client and the class APIs `CourtApi`, `GroupApi`, `SessionApi`, `ShuttlecockApi` (`src/libs/supabase/`).

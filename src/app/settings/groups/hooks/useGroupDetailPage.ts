@@ -1,17 +1,17 @@
 'use client';
 
 import { useQueryCourts } from '@/hooks/useQueryCourts';
-import { useMutateSaveGroup, useQueryGroups } from '@/hooks/useQueryGroups';
+import { useMutateDeleteGroup, useMutateSaveGroup, useQueryGroups } from '@/hooks/useQueryGroups';
 import { useQuerySessions } from '@/hooks/useQuerySessions';
 import { confirm } from '@/stores/confirm.store';
 import { ConnectionState, useConnectionStore } from '@/stores/connection.store';
 import type { TGroupSave } from '@/types/group.type';
 import type { TMemberDraft } from '@/types/player.type';
-import { nowIso } from '@/utils/date';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import type { GroupDraft } from '../schemas/group.schema';
+import { deleteGroupConfirmOptions } from '../utils/delete-group';
 
 /** State và thao tác của trang chi tiết 1 nhóm (`/settings/groups/[id]`). `page.tsx` chỉ lo hiển thị. */
 export function useGroupDetailPage() {
@@ -24,6 +24,7 @@ export function useGroupDetailPage() {
   const { data: courts, isPending: courtsPending } = useQueryCourts();
   const { data: sessions, isPending: sessionsPending } = useQuerySessions();
   const { mutateAsync: saveGroup, isPending: saveGroupPending } = useMutateSaveGroup();
+  const { mutateAsync: deleteGroup } = useMutateDeleteGroup();
 
   const loading: boolean = groupsPending || courtsPending || sessionsPending || saveGroupPending;
   const group = useMemo(() => groups.find((g) => g.id === groupId), [groups, groupId]);
@@ -45,7 +46,6 @@ export function useGroupDetailPage() {
       ...group,
       ...draft,
       default_court_id: draft.default_court_id || null, // form dùng '' cho "chưa chọn"
-      updated_at: nowIso(),
     };
     try {
       await saveGroup(updated);
@@ -57,29 +57,21 @@ export function useGroupDetailPage() {
     }
   }
 
-  async function handleHide(): Promise<void> {
+  async function handleDelete(): Promise<void> {
     if (!group) return;
-    const ok: boolean = await confirm({
-      title: `Ẩn nhóm "${group.name}"?`,
-      description:
-        'Nhóm sẽ không còn hiện khi tính tiền. Danh sách thành viên và lịch sử các buổi chơi của nhóm vẫn được giữ, bạn có thể khôi phục bất cứ lúc nào.',
-      confirmLabel: 'Ẩn nhóm',
-      destructive: true,
-    });
-    if (!ok) return;
-    const updated: TGroupSave = { ...group, deleted_at: nowIso(), updated_at: nowIso() };
+    const sessionCount: number = sessions.filter((s) => s.group_id === group.id).length;
+    if (!(await confirm(deleteGroupConfirmOptions(group, sessionCount)))) return;
     try {
-      await saveGroup(updated);
-      toast.success(`Đã ẩn nhóm "${group.name}"`);
+      await deleteGroup(group.id);
+      toast.success(`Đã xóa nhóm "${group.name}"`);
       router.push('/settings/groups');
     } catch (err) {
-      toast.error(`Ẩn thất bại: ${err instanceof Error ? err.message : String(err)}`);
+      toast.error(`Xóa thất bại: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
-
   async function handleSaveMembers(members: TMemberDraft[]): Promise<void> {
     if (!group) return;
-    const updated: TGroupSave = { ...group, members, updated_at: nowIso() };
+    const updated: TGroupSave = { ...group, members };
     try {
       await saveGroup(updated);
       toast.success('Đã lưu danh sách thành viên');
@@ -104,7 +96,7 @@ export function useGroupDetailPage() {
     setIsEditing,
     courtName,
     handleUpdate,
-    handleHide,
+    handleDelete,
     handleSaveMembers,
   };
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import RoleBadge from '@/components/common/RoleBadge';
-import type { TSessionDraft, TSessionPlayer } from '@/types/session.type';
+import type { TSessionDraft } from '@/types/session.type';
 import { buildSessionTitle } from '@/utils/date';
 import { describePayable, formatVND } from '@/utils/format';
 import { countPlayers, sumRoundedPayable } from '@/utils/session';
@@ -251,12 +251,12 @@ export default function CalculatorBillSummaryCard({
 function RoundingNote({ bill, collected }: { bill: TSessionDraft; collected: number }) {
   const players = bill.session_players;
   // Trừ phần đã ứng trước (vd: người mua nước) vì khoản đó đã được trả, không cần thu lại
-  const advanced: number = players.reduce((sum, p: Omit<TSessionPlayer, 'session_id'>) => sum + p.water_credit, 0);
+  const advanced: number = players.reduce((sum, p: TSessionDraft['session_players'][number]) => sum + p.water_credit, 0);
   const expected: number = bill.total_cost - advanced;
   const diff: number = collected - expected;
   if (diff === 0) return null;
 
-  const advancer: Omit<TSessionPlayer, 'session_id'> | undefined = players.find((p) => p.water_credit > 0);
+  const advancer: TSessionDraft['session_players'][number] | undefined = players.find((p) => p.water_credit > 0);
 
   return (
     <div className="mt-1 flex flex-col gap-0.5 text-[11px] leading-relaxed text-gray-400">

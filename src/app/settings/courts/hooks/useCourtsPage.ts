@@ -55,7 +55,6 @@ export function useCourtsPage() {
       address: values.address.trim(),
       created_at: now,
       updated_at: now,
-      deleted_at: null,
     };
     try {
       await saveCourt(newCourt);
@@ -71,7 +70,7 @@ export function useCourtsPage() {
     if (findDuplicate(name, court.id)) {
       return `Sân "${name}" đã có trong danh sách.`;
     }
-    const updated: TCourt = { ...court, name, address: values.address.trim(), updated_at: nowIso() };
+    const updated: TCourt = { ...court, name, address: values.address.trim() };
     try {
       await saveCourt(updated);
       closeForm();

@@ -19,6 +19,29 @@ export class SessionApi extends SupabaseClientApi {
   }
 
   /**
+   * Các buổi chơi chưa thu đủ: còn ít nhất 1 người cần chuyển / được hoàn tiền (`rounded_payable <> 0`)
+   * mà chưa được đánh dấu (`paid_method is null`). Mới nhất trước, kèm đủ người chơi như `fetchAll`.
+   * `unpaid` là lần nhúng thứ 2 của `session_players`, rỗng `()` nên không trả về dữ liệu, chỉ dùng để lọc;
+   * `!inner` bỏ các buổi không có dòng nào khớp.
+   */
+  static async fetchUnsettled(): Promise<TSession[]> {
+    const { data, error } = await this.database
+      .from('sessions')
+      .select('*, session_players(*), unpaid:session_players!inner()')
+      .is('unpaid.paid_method', null)
+      .neq('unpaid.rounded_payable', 0)
+      .order('created_at', {
+        ascending: false,
+      })
+      .order('position', {
+        referencedTable: 'session_players',
+        ascending: true,
+      });
+    if (error) throw error;
+    return data as TSession[];
+  }
+
+  /**
    * Lưu 1 buổi chơi mới cùng người chơi trong 1 transaction (hàm `save_session`). Trả về id buổi chơi.
    * Thứ tự người chơi trong mảng được lưu vào cột `position`.
    */
